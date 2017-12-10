@@ -1,7 +1,7 @@
 
-qr: qr-utf8.c
+qr: qr.c libqr.c
 	gcc -o $@ -std=c99 -Wshadow -Wall -pedantic -Werror -g -Og -W -fsanitize=address $<
 
-test: qr-test.c qr-utf8.c
-	gcc -o $@ -std=c99 -Wshadow -Wall -pedantic -Werror -g -Og -W -fsanitize=undefined qr-test.c
+test: libqr.c test.c
+	gcc -o $@ -std=c99 -Wshadow -Wall -pedantic -Werror -g -Og -W -fsanitize=undefined test.c
 

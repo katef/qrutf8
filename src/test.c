@@ -33,9 +33,7 @@
 #include <string.h>
 #include <time.h>
 
-#define TEST
-#include "qr-utf8.c"
-#undef TEST
+#include "libqr.c"
 
 #include "../share/git/greatest/greatest.h"
 
