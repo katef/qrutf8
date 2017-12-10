@@ -1,0 +1,3 @@
+[submodule "share/git/greatest"]
+	path = share/git/greatest
+	url = https://github.com/silentbicycle/greatest
