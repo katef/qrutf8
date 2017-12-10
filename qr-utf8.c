@@ -51,7 +51,7 @@
  * Requires QR_VER_MIN <= n <= QR_VER_MAX.
  */
 #define QR_BUF_LEN(ver) \
-	((((ver) * 4 + 17) * ((ver) * 4 + 17) + 7) / 8 + 1)
+	((((ver) * 4 + 17) * ((ver) * 4 + 17) + 7) / 8)
 
 /*
  * The worst-case number of bytes needed to store one QR Code, up to and including
@@ -98,6 +98,14 @@ enum qr_mode {
 };
 
 struct qr_code {
+	/*
+	 * The side length of the given QR Code, assuming that encoding succeeded.
+	 * The result is in the range [21, 177]. The length of the array buffer
+	 * is related to the side length; every 'struct qr_code.map[]' must have
+	 * length at least QR_BUF_LEN(ver), which equals ceil(size^2 / 8).
+	 */
+	size_t size;
+
 	uint8_t *map;
 };
 
@@ -745,42 +753,21 @@ qr_isnumeric(const char *s)
 /*---- Modules (pixels) ----*/
 
 /*
- * Returns the side length of the given QR Code, assuming that encoding succeeded.
- * The result is in the range [21, 177]. Note that the length of the array buffer
- * is related to the side length - every 'struct qr_code.map[]' must have length at least
- * QR_BUF_LEN(ver), which equals ceil(size^2 / 8 + 1).
- */
-size_t
-qr_get_size(const struct qr_code *q)
-{
-	int result;
-
-	assert(q != NULL);
-
-	result = q->map[0];
-
-	assert((QR_VER_MIN * 4 + 17) <= result
-		&& result <= (QR_VER_MAX * 4 + 17));
-
-	return result;
-}
-
-/*
  * Returns the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
 bool
-qr_get_module(const uint8_t *map, unsigned x, unsigned y)
+qr_get_module(const struct qr_code *q, unsigned x, unsigned y)
 {
-	size_t size = map[0];
+	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+	assert(x < q->size && y < q->size);
 
-	assert(21 <= size && size <= 177 && x < size && y < size);
-
-	int i = y * size + x;
+	int i = y * q->size + x;
 	int bit = i & 7;
-	int byte = (i >> 3) + 1;
+	int byte = i >> 3;
 
-	return ((map[byte] >> bit) & 1) != 0;
+	return ((q->map[byte] >> bit) & 1) != 0;
 }
 
 // Sets the module at the given coordinates, which must be in bounds.
@@ -788,24 +775,29 @@ static void
 set_module(struct qr_code *q, unsigned x, unsigned y, bool v)
 {
 	assert(q != NULL);
-	size_t size = q->map[0];
-	assert(21 <= size && size <= 177 && x < size && y < size);
-	int i = y * size + x;
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+	assert(x < q->size && y < q->size);
+
+	int i = y * q->size + x;
 	int bit = i & 7;
-	int byte = (i >> 3) + 1;
-	if (v)
+	int byte = i >> 3;
+	if (v) {
 		q->map[byte] |= 1 << bit;
-	else
+	} else {
 		q->map[byte] &= (1 << bit) ^ 0xFF;
+	}
 }
 
 // Sets the module at the given coordinates, doing nothing if out of bounds.
 static void
 set_module_bounded(struct qr_code *q, unsigned x, unsigned y, bool v)
 {
-	size_t size = q->map[0];
-	if (x < size && y < size)
+	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+
+	if (x < q->size && y < q->size) {
 		set_module(q, x, y, v);
+	}
 }
 
 // Sets every pixel in the range [left : left + width] * [top : top + height] to v.
@@ -861,19 +853,20 @@ getAlignmentPatternPositions(unsigned ver, uint8_t a[static 7])
 static void
 draw_init(unsigned ver, struct qr_code *q)
 {
+	assert(q != NULL);
+
 	// Initialize QR Code
-	size_t size = ver * 4 + 17;
-	memset(q->map, 0, (size * size + 7) / 8 + 1);
-	q->map[0] = (uint8_t) size;
+	q->size = ver * 4 + 17;
+	memset(q->map, 0, (q->size * q->size + 7) / 8);
 
 	// Fill horizontal and vertical timing patterns
-	fill(6, 0, 1, size, q);
-	fill(0, 6, size, 1, q);
+	fill(6, 0, 1, q->size, q);
+	fill(0, 6, q->size, 1, q);
 
 	// Fill 3 finder patterns (all corners except bottom right) and format bits
 	fill(0, 0, 9, 9, q);
-	fill(size - 8, 0, 8, 9, q);
-	fill(0, size - 8, 9, 8, q);
+	fill(q->size - 8, 0, 8, 9, q);
+	fill(0, q->size - 8, 9, 8, q);
 
 	// Fill numerous alignment patterns
 	uint8_t alignPatPos[7] = {0};
@@ -889,8 +882,8 @@ draw_init(unsigned ver, struct qr_code *q)
 
 	// Fill version blocks
 	if (ver >= 7) {
-		fill(size - 11, 0, 3, 6, q);
-		fill(0, size - 11, 6, 3, q);
+		fill(q->size - 11, 0, 3, 6, q);
+		fill(0, q->size - 11, 6, 3, q);
 	}
 }
 
@@ -902,9 +895,11 @@ draw_init(unsigned ver, struct qr_code *q)
 static void
 draw_white_function_modules(struct qr_code *q, unsigned ver)
 {
+	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+
 	// Draw horizontal and vertical timing patterns
-	size_t size = qr_get_size(q);
-	for (size_t i = 7; i < size - 7; i += 2) {
+	for (size_t i = 7; i < q->size - 7; i += 2) {
 		set_module(q, 6, i, false);
 		set_module(q, i, 6, false);
 	}
@@ -917,8 +912,8 @@ draw_white_function_modules(struct qr_code *q, unsigned ver)
 				dist = abs(j);
 			if (dist == 2 || dist == 4) {
 				set_module_bounded(q, 3 + j, 3 + i, false);
-				set_module_bounded(q, size - 4 + j, 3 + i, false);
-				set_module_bounded(q, 3 + j, size - 4 + i, false);
+				set_module_bounded(q, q->size - 4 + j, 3 + i, false);
+				set_module_bounded(q, 3 + j, q->size - 4 + i, false);
 			}
 		}
 	}
@@ -951,7 +946,7 @@ draw_white_function_modules(struct qr_code *q, unsigned ver)
 		// Draw two copies
 		for (int i = 0; i < 6; i++) {
 			for (int j = 0; j < 3; j++) {
-				int k = size - 11 + j;
+				int k = q->size - 11 + j;
 				set_module(q, k, i, (data & 1) != 0);
 				set_module(q, i, k, (data & 1) != 0);
 				data >>= 1;
@@ -968,6 +963,9 @@ draw_white_function_modules(struct qr_code *q, unsigned ver)
 static void
 draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr_code *q)
 {
+	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+
 	// Calculate error correction code and pack bits
 	assert(0 <= mask && mask <= 7);
 	int data = -1;  // Dummy value
@@ -996,12 +994,11 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr_code *q)
 		set_module(q, 14 - i, 8, ((data >> i) & 1) != 0);
 
 	// Draw second copy
-	size_t size = qr_get_size(q);
 	for (int i = 0; i <= 7; i++)
-		set_module(q, size - 1 - i, 8, ((data >> i) & 1) != 0);
+		set_module(q, q->size - 1 - i, 8, ((data >> i) & 1) != 0);
 	for (int i = 8; i < 15; i++)
-		set_module(q, 8, size - 15 + i, ((data >> i) & 1) != 0);
-	set_module(q, 8, size - 8, true);
+		set_module(q, 8, q->size - 15 + i, ((data >> i) & 1) != 0);
+	set_module(q, 8, q->size - 8, true);
 }
 
 /*
@@ -1010,24 +1007,24 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr_code *q)
  * and white at codeword modules (including unused remainder bits).
  */
 static void
-draw_codewords(const void *data, int dataLen, struct qr_code *q)
+draw_codewords(const void *data, size_t len, struct qr_code *q)
 {
 	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
 
 	const uint8_t *p = data;
-	size_t size = qr_get_size(q);
-	int i = 0;  // Bit index into the data
+	unsigned i = 0;  // Bit index into the data
 
 	// Do the funny zigzag scan
-	for (int right = size - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
+	for (int right = q->size - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
 		if (right == 6)
 			right = 5;
-		for (size_t vert = 0; vert < size; vert++) {  // Vertical counter
+		for (size_t vert = 0; vert < q->size; vert++) {  // Vertical counter
 			for (int j = 0; j < 2; j++) {
 				unsigned x = right - j;  // Actual x coordinate
 				bool upward = ((right + 1) & 2) == 0;
-				unsigned y = upward ? size - 1 - vert : vert;  // Actual y coordinate
-				if (!qr_get_module(q->map, x, y) && i < dataLen * 8) {
+				unsigned y = upward ? q->size - 1 - vert : vert;  // Actual y coordinate
+				if (!qr_get_module(q, x, y) && i < len * 8) {
 					bool v = ((p[i >> 3] >> (7 - (i & 7))) & 1) != 0;
 					set_module(q, x, y, v);
 					i++;
@@ -1037,7 +1034,7 @@ draw_codewords(const void *data, int dataLen, struct qr_code *q)
 			}
 		}
 	}
-	assert(i == dataLen * 8);
+	assert(i == len * 8);
 }
 
 /*
@@ -1050,11 +1047,17 @@ static void
 apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
 {
 	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
 	assert(0 <= mask && mask <= 7);  // Disallows QR_MASK_AUTO
-	size_t size = qr_get_size(q);
-	for (unsigned y = 0; y < size; y++) {
-		for (unsigned x = 0; x < size; x++) {
-			if (qr_get_module(functionModules, x, y)) {
+
+	for (unsigned y = 0; y < q->size; y++) {
+		for (unsigned x = 0; x < q->size; x++) {
+			struct qr_code tmp;
+
+			tmp.size = q->size;
+			tmp.map  = (void *) functionModules;
+
+			if (qr_get_module(&tmp, x, y)) {
 				continue;
 			}
 
@@ -1074,7 +1077,7 @@ apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
 				break;
 			}
 
-			set_module(q, x, y, qr_get_module(q->map, x, y) ^ invert);
+			set_module(q, x, y, qr_get_module(q, x, y) ^ invert);
 		}
 	}
 }
@@ -1086,20 +1089,22 @@ apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
 static long
 penalty(const struct qr_code *q)
 {
+	assert(q != NULL);
+	assert((QR_VER_MIN * 4 + 17) <= q->size && q->size <= (QR_VER_MAX * 4 + 17));
+
 #define PENALTY_N1 3
 #define PENALTY_N2 3
 #define PENALTY_N3 40
 #define PENALTY_N4 10
 
-	size_t size = qr_get_size(q);
 	long result = 0;
 
 	// Adjacent modules in row having same color
-	for (unsigned y = 0; y < size; y++) {
+	for (unsigned y = 0; y < q->size; y++) {
 		bool colorX;
-		for (unsigned x = 0, runX; x < size; x++) {
-			if (x == 0 || qr_get_module(q->map, x, y) != colorX) {
-				colorX = qr_get_module(q->map, x, y);
+		for (unsigned x = 0, runX; x < q->size; x++) {
+			if (x == 0 || qr_get_module(q, x, y) != colorX) {
+				colorX = qr_get_module(q, x, y);
 				runX = 1;
 			} else {
 				runX++;
@@ -1111,11 +1116,11 @@ penalty(const struct qr_code *q)
 		}
 	}
 	// Adjacent modules in column having same color
-	for (unsigned x = 0; x < size; x++) {
+	for (unsigned x = 0; x < q->size; x++) {
 		bool colorY;
-		for (unsigned y = 0, runY; y < size; y++) {
-			if (y == 0 || qr_get_module(q->map, x, y) != colorY) {
-				colorY = qr_get_module(q->map, x, y);
+		for (unsigned y = 0, runY; y < q->size; y++) {
+			if (y == 0 || qr_get_module(q, x, y) != colorY) {
+				colorY = qr_get_module(q, x, y);
 				runY = 1;
 			} else {
 				runY++;
@@ -1128,28 +1133,28 @@ penalty(const struct qr_code *q)
 	}
 
 	// 2*2 blocks of modules having same color
-	for (unsigned y = 0; y < size - 1; y++) {
-		for (unsigned x = 0; x < size - 1; x++) {
-			bool  color = qr_get_module(q->map, x, y);
-			if (  color == qr_get_module(q->map, x + 1, y) &&
-			      color == qr_get_module(q->map, x, y + 1) &&
-			      color == qr_get_module(q->map, x + 1, y + 1))
+	for (unsigned y = 0; y < q->size - 1; y++) {
+		for (unsigned x = 0; x < q->size - 1; x++) {
+			bool  color = qr_get_module(q, x, y);
+			if (  color == qr_get_module(q, x + 1, y) &&
+			      color == qr_get_module(q, x, y + 1) &&
+			      color == qr_get_module(q, x + 1, y + 1))
 				result += PENALTY_N2;
 		}
 	}
 
 	// Finder-like pattern in rows
-	for (unsigned y = 0; y < size; y++) {
-		for (unsigned x = 0, bits = 0; x < size; x++) {
-			bits = ((bits << 1) & 0x7FF) | (qr_get_module(q->map, x, y) ? 1 : 0);
+	for (unsigned y = 0; y < q->size; y++) {
+		for (unsigned x = 0, bits = 0; x < q->size; x++) {
+			bits = ((bits << 1) & 0x7FF) | (qr_get_module(q, x, y) ? 1 : 0);
 			if (x >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
 				result += PENALTY_N3;
 		}
 	}
 	// Finder-like pattern in columns
-	for (unsigned x = 0; x < size; x++) {
-		for (unsigned y = 0, bits = 0; y < size; y++) {
-			bits = ((bits << 1) & 0x7FF) | (qr_get_module(q->map, x, y) ? 1 : 0);
+	for (unsigned x = 0; x < q->size; x++) {
+		for (unsigned y = 0, bits = 0; y < q->size; y++) {
+			bits = ((bits << 1) & 0x7FF) | (qr_get_module(q, x, y) ? 1 : 0);
 			if (y >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
 				result += PENALTY_N3;
 		}
@@ -1157,14 +1162,14 @@ penalty(const struct qr_code *q)
 
 	// Balance of v and white modules
 	unsigned v = 0;
-	for (unsigned y = 0; y < size; y++) {
-		for (unsigned x = 0; x < size; x++) {
-			if (qr_get_module(q->map, x, y))
+	for (unsigned y = 0; y < q->size; y++) {
+		for (unsigned x = 0; x < q->size; x++) {
+			if (qr_get_module(q, x, y))
 				v++;
 		}
 	}
 
-	size_t total = size * size;
+	size_t total = q->size * q->size;
 	// Find smallest k such that (45-5k)% <= dark/total <= (55+5k)%
 	for (unsigned k = 0; v * 20L < (9L - k) * total || v * 20L > (11L + k) * total; k++) {
 		result += PENALTY_N4;
@@ -1213,7 +1218,7 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 		if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits)
 			break;  // This version number is found to be suitable
 		if (ver >= max) {  // All versions in the range could not fit the given data
-			q->map[0] = 0;  // Set size to invalid value for safety
+			q->size = 0;  // Set size to invalid value for safety
 			return false;
 		}
 	}
@@ -1338,7 +1343,7 @@ qr_encode_str(const char *s, void *tmp, struct qr_code *q,
 
 error:
 
-	q->map[0] = 0;  // Set size to invalid value for safety
+	q->size = 0;  // Set size to invalid value for safety
 
 	return false;
 }
@@ -1370,7 +1375,7 @@ qr_encode_bytes(const void *data, size_t len, void *tmp, struct qr_code *q,
 	seg.mode  = QR_MODE_BYTE;
 	int count = count_seg_bits(seg.mode, len);
 	if (count == -1) {
-		q->map[0] = 0;  // Set size to invalid value for safety
+		q->size = 0;  // Set size to invalid value for safety
 		return false;
 	}
 
@@ -1424,16 +1429,15 @@ error:
 static void
 qr_print_utf8qb(FILE *f, const struct qr_code *q, bool invert)
 {
-	size_t size, border;
+	size_t border;
 
 	assert(f != NULL);
 	assert(q != NULL);
 
-	size   = qr_get_size(q);
 	border = 4; /* per the spec */
 
-	for (int y = -border; y < (int) (size + border); y += 2) {
-		for (int x = -border; x < (int) (size + border); x += 2) {
+	for (int y = -border; y < (int) (q->size + border); y += 2) {
+		for (int x = -border; x < (int) (q->size + border); x += 2) {
 			char s[5] = { 0x00, 0x00, 0x00, 0x00, 0x00 };
 			size_t i;
 			int e;
@@ -1451,11 +1455,11 @@ qr_print_utf8qb(FILE *f, const struct qr_code *q, bool invert)
 			e = 0;
 
 			for (i = 0; i < sizeof a / sizeof *a; i++) {
-				if (a[i].x >= size || a[i].y >= size) {
+				if (a[i].x >= q->size || a[i].y >= q->size) {
 					continue;
 				}
 
-				if (qr_get_module(q->map, a[i].x, a[i].y)) {
+				if (qr_get_module(q, a[i].x, a[i].y)) {
 					e |= 1 << i;
 				}
 			}
