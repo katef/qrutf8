@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <errno.h>
 #include <ctype.h>
 
 /* minimum and maximum defined QR Code version numbers for Model 2 */
@@ -243,6 +244,7 @@ count_seg_bits(enum qr_mode mode, size_t len)
 	const int LIMIT = INT16_MAX;  // Can be configured as high as INT_MAX
 
 	if (len > (size_t) LIMIT) {
+		errno = EMSGSIZE;
 		return -1;
 	}
 
@@ -299,6 +301,8 @@ count_seg_bits(enum qr_mode mode, size_t len)
 	return r;
 
 overflow:
+
+	errno = ERANGE;
 
 	return -1;
 }
@@ -1221,6 +1225,7 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 			break;  // This version number is found to be suitable
 	}
 	if (ver >= max) {  // All versions in the range could not fit the given data
+		errno = EMSGSIZE;
 		return false;
 	}
 	assert(dataUsedBits != -1);
@@ -1337,6 +1342,8 @@ qr_encode_str(const char *s, void *tmp, struct qr_code *q,
 	return qr_encode_segments(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, q);
 
 error:
+
+	errno = EMSGSIZE;
 
 	return false;
 }
