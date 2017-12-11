@@ -44,7 +44,7 @@
 #define QR_VER_MIN 1
 #define QR_VER_MAX 40
 
-#define QR_SIZE(ver) ((ver) * 4 + 17)
+#define QR_SIZE(ver) ((size_t) (ver) * 4 + 17)
 
 /*
  * The number of bytes needed to store any QR Code up to and including the given version number.
@@ -167,7 +167,7 @@ static const int8_t NUM_ERROR_CORRECTION_BLOCKS[4][41] = {
 	{ -1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81 }, // High
 };
 
-static const char *ALNUM_CHARSET =
+static const char ALNUM_CHARSET[] =
 	"0123456789"
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	" $%*+-./:";
