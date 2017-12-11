@@ -5,3 +5,6 @@ qr: qr.c libqr.c
 test: libqr.c test.c
 	gcc -o $@ -std=c99 -Wshadow -Wall -pedantic -Werror -g -Og -W -fsanitize=undefined test.c
 
+fuzz: fuzz.c libqr.c
+	gcc -o $@ -I ${HOME}/include -std=c99 -Wshadow -Wall -pedantic -Werror -g -Og -W -fsanitize=address fuzz.c -L ${HOME}/lib -ltheft
+
