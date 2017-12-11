@@ -1484,3 +1484,50 @@ qr_print_utf8qb(FILE *f, const struct qr_code *q, bool wide, bool invert)
 	}
 }
 
+static void
+qr_print_xpm(FILE *f, const struct qr_code *q, bool invert)
+{
+	size_t border;
+
+	assert(f != NULL);
+	assert(q != NULL);
+
+	border = 4; /* per the spec */
+
+	fputs("/* XPM */\n", f);
+	fputs("static char *qr[] = {\n", f);
+	fputs("/* columns rows colors chars-per-pixels */\n", f);
+	fprintf(f, "\"%zu %zu 2 1\",\n", q->size + border * 2, q->size + border * 2);
+	fprintf(f, "\"  c black\",\n");
+	fprintf(f, "\"# c gray100\",\n");
+	fprintf(f, "/* pixels */\n");
+
+	for (int y = -border; y < (int) (q->size + border); y++) {
+		fputc('"', f);
+
+		for (int x = -border; x < (int) (q->size + border); x++) {
+			bool v;
+
+			if (x < 0 || x >= (int) q->size || y < 0 || y >= (int) q->size) {
+				v = false;
+			} else {
+				v = qr_get_module(q, x, y);
+			}
+
+			if (invert) {
+				v = !v;
+			}
+
+			fputc(v ? '#' : ' ', f);
+		}
+
+		fputc('"', f);
+		if (y < (int) (q->size + border)) {
+			fputs(",", f);
+		}
+		fputc('\n', f);
+	}
+
+	fputs("};", f);
+}
+

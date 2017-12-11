@@ -103,7 +103,12 @@ main(int argc, char * const argv[])
 		exit(EXIT_FAILURE);
 	}
 
+/*
 	qr_print_utf8qb(stdout, &q, wide, invert);
+*/
+(void) qr_print_utf8qb;
+(void) wide;
+	qr_print_xpm(stdout, &q, invert);
 
 	return 0;
 }
