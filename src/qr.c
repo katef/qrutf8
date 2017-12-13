@@ -8,9 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <quirc.h>
-
 #include "libqr.c"
+#include "decode.c"
 
 int
 main(int argc, char * const argv[])

@@ -358,6 +358,25 @@ static const struct galois_field gf256 = {
 	.exp = gf256_exp
 };
 
+static const char *const error_table[] = {
+	[QUIRC_SUCCESS] = "Success",
+	[QUIRC_ERROR_INVALID_GRID_SIZE] = "Invalid grid size",
+	[QUIRC_ERROR_INVALID_VERSION] = "Invalid version",
+	[QUIRC_ERROR_FORMAT_ECC] = "Format data ECC failure",
+	[QUIRC_ERROR_DATA_ECC] = "ECC failure",
+	[QUIRC_ERROR_UNKNOWN_DATA_TYPE] = "Unknown data type",
+	[QUIRC_ERROR_DATA_OVERFLOW] = "Data overflow",
+	[QUIRC_ERROR_DATA_UNDERFLOW] = "Data underflow"
+};
+
+const char *quirc_strerror(quirc_decode_error_t err)
+{
+	if (err >= 0 && err < sizeof(error_table) / sizeof(error_table[0]))
+		return error_table[err];
+
+	return "Unknown error";
+}
+
 /************************************************************************
  * Polynomial operations
  */
@@ -1109,7 +1128,7 @@ static quirc_decode_error_t decode_payload(struct quirc_data *data,
 done:
 
 	/* Add nul terminator to all payloads */
-	if (data->payload_len >= sizeof(data->payload))
+	if (data->payload_len >= (int) sizeof(data->payload))
 		data->payload_len--;
 	data->payload[data->payload_len] = 0;
 

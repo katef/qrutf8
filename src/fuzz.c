@@ -13,8 +13,8 @@
 
 #include "libqr.c"
 #include "util.c"
+#include "decode.c"
 
-#include <quirc.h>
 #include <theft.h>
 
 enum gate {
