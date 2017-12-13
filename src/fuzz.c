@@ -20,6 +20,8 @@
 
 #include <theft.h>
 
+#include "../share/git/greatest/greatest.h"
+
 enum gate {
 	GATE_START,
 	GATE_ENCODED,
@@ -449,6 +451,26 @@ seg_print(FILE *f, const void *instance, void *env)
 	(void) o;
 }
 
+TEST
+roundtrip(void *env)
+{
+	struct theft_run_config config = {
+		.name      = "roundtrip",
+		.prop1     = prop_roundtrip,
+		.type_info = { env },
+		.trials    = 100000,
+		.seed      = theft_seed_of_time()
+	};
+
+	if (theft_run(&config) == THEFT_RUN_PASS) {
+		PASS();
+	}
+
+	FAIL();
+}
+
+GREATEST_MAIN_DEFS();
+
 int
 main(int argc, char *argv[])
 {
@@ -459,20 +481,10 @@ main(int argc, char *argv[])
 		.autoshrink_config = { .enable = true }
 	};
 
-	struct theft_run_config config = {
-		.name      = "roundtrip",
-		.prop1     = prop_roundtrip,
-		.type_info = { &seg_info },
-		.trials    = 100000,
-		.seed      = theft_seed_of_time()
-	};
+	GREATEST_MAIN_BEGIN();
 
-	(void) argc;
-	(void) argv;
+	RUN_TEST1(roundtrip, &seg_info);
 
-	(void) qr_print_xpm;
-	(void) qr_print_utf8qb;
-
-	return theft_run(&config) == THEFT_RUN_PASS ? EXIT_SUCCESS : EXIT_FAILURE;
+	GREATEST_MAIN_END();
 }
 
