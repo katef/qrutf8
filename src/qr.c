@@ -10,8 +10,9 @@
 #include <stdio.h>
 
 #include <qr.h>
+#include <print.h>
 
-#include "libqr.c"
+#include "encode.c"
 #include "decode.c"
 
 int

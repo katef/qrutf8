@@ -56,5 +56,12 @@ struct qr {
  */
 #define QR_BUF_LEN_MAX QR_BUF_LEN(QR_VER_MAX)
 
+/*
+ * Returns the color of the module (pixel) at the given coordinates, which is either
+ * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
+ */
+bool
+qr_get_module(const struct qr *q, unsigned x, unsigned y);
+
 #endif
 

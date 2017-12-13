@@ -12,10 +12,11 @@
 #include <time.h>
 
 #include <qr.h>
+#include <print.h>
 
-#include "libqr.c"
-#include "util.c"
+#include "encode.c"
 #include "decode.c"
+#include "util.c"
 
 #include <theft.h>
 
