@@ -787,8 +787,8 @@ fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr *q)
  * Returns the number of alignment patterns, which is the used
  * array length, in the range [0, 7].
  */
-static int
-getAlignmentPatternPositions(unsigned ver, uint8_t a[static QR_ALIGN_MAX])
+unsigned
+getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX])
 {
 	unsigned i, step, pos;
 	unsigned n;
@@ -837,7 +837,7 @@ draw_init(unsigned ver, struct qr *q)
 	fill(0, q->size - 8, 9, 8, q);
 
 	// Fill numerous alignment patterns
-	uint8_t alignPatPos[7] = {0};
+	unsigned alignPatPos[QR_ALIGN_MAX] = { 0 };
 	int n = getAlignmentPatternPositions(ver, alignPatPos);
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < n; j++) {
@@ -887,7 +887,7 @@ draw_white_function_modules(struct qr *q, unsigned ver)
 	}
 
 	// Draw numerous alignment patterns
-	uint8_t alignPatPos[7] = {0};
+	unsigned alignPatPos[QR_ALIGN_MAX] = { 0 };
 	int n = getAlignmentPatternPositions(ver, alignPatPos);
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < n; j++) {

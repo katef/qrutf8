@@ -63,5 +63,9 @@ struct qr {
 bool
 qr_get_module(const struct qr *q, unsigned x, unsigned y);
 
+/* XXX: internal */
+unsigned
+getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX]);
+
 #endif
 

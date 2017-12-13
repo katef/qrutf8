@@ -407,11 +407,11 @@ GetAlignmentPatternPositions(void)
 	};
 	for (size_t i = 0; i < ARRAY_LENGTH(cases); i++) {
 		const int *tc = cases[i];
-		uint8_t pos[7];
-		int num = getAlignmentPatternPositions(tc[0], pos);
-		ASSERT_EQ(num, tc[1]);
-		for (int j = 0; j < num; j++)
-			ASSERT_EQ(pos[j], tc[2 + j]);
+		unsigned pos[7];
+		size_t n = getAlignmentPatternPositions(tc[0], pos);
+		ASSERT_EQ(n, (size_t) tc[1]);
+		for (size_t j = 0; j < n; j++)
+			ASSERT_EQ(pos[j], (unsigned) tc[2 + j]);
 	}
 
 	PASS();

@@ -67,7 +67,6 @@ struct quirc_rs_params {
 
 struct quirc_version_info {
 	int				data_bytes;
-	int				apat[QR_ALIGN_MAX];
 	struct quirc_rs_params          ecc[4];
 };
 
@@ -545,56 +544,58 @@ mask_bit(int mask, int i, int j)
 }
 
 static int
-reserved_cell(int version, int i, int j)
+reserved_cell(unsigned ver, unsigned x, unsigned y)
 {
-	const struct quirc_version_info *ver = &quirc_version_db[version];
-	int size = version * 4 + 17;
-	int ai = -1, aj = -1, a;
+	size_t size = ver * 4 + 17;
+	int ax = -1, ay = -1;
+	size_t i;
 
 	/* Finder + format: top left */
-	if (i < 9 && j < 9)
+	if (x < 9 && y < 9)
 		return 1;
 
 	/* Finder + format: bottom left */
-	if (i + 8 >= size && j < 9)
+	if (x + 8 >= size && y < 9)
 		return 1;
 
 	/* Finder + format: top right */
-	if (i < 9 && j + 8 >= size)
+	if (x < 9 && y + 8 >= size)
 		return 1;
 
 	/* Exclude timing patterns */
-	if (i == 6 || j == 6)
+	if (x == 6 || y == 6)
 		return 1;
 
-	/* Exclude version info, if it exists. Version info sits adjacent to
+	/* Exclude ver info, if it exists. Version info sits adjacent to
 	 * the top-right and bottom-left finders in three rows, bounded by
 	 * the timing pattern.
 	 */
-	if (version >= 7) {
-		if (i < 6 && j + 11 >= size)
+	if (ver >= 7) {
+		if (x < 6 && y + 11 >= size)
 			return 1;
-		if (i + 11 >= size && j < 6)
+		if (x + 11 >= size && y < 6)
 			return 1;
 	}
 
 	/* Exclude alignment patterns */
-	for (a = 0; a < QR_ALIGN_MAX && ver->apat[a]; a++) {
-		int p = ver->apat[a];
+	unsigned alignPatPos[QR_ALIGN_MAX];
+	size_t n = getAlignmentPatternPositions(ver, alignPatPos);
+	for (i = 0; i < n; i++) {
+		int p = alignPatPos[i];
 
-		if (abs(p - i) < 3)
-			ai = a;
-		if (abs(p - j) < 3)
-			aj = a;
+		if (abs(p - x) < 3)
+			ax = i;
+		if (abs(p - y) < 3)
+			ay = i;
 	}
 
-	if (ai >= 0 && aj >= 0) {
-		a--;
-		if (ai > 0 && ai < a)
+	if (ax >= 0 && ay >= 0) {
+		i--;
+		if (ax > 0 && ax < (int) i)
 			return 1;
-		if (aj > 0 && aj < a)
+		if (ay > 0 && ay < (int) i)
 			return 1;
-		if (aj == a && ai == a)
+		if (ay == (int) i && ax == (int) i)
 			return 1;
 	}
 
