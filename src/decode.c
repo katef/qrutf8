@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <qr.h>
+
 typedef enum {
 	QUIRC_SUCCESS = 0,
 	QUIRC_ERROR_INVALID_GRID_SIZE,
@@ -31,7 +33,6 @@ typedef enum {
 
 const char *quirc_strerror(quirc_decode_error_t err);
 
-#define QUIRC_MAX_BITMAP	3917
 #define QUIRC_MAX_PAYLOAD	8896
 
 #define QUIRC_DATA_TYPE_NUMERIC       1
@@ -39,23 +40,7 @@ const char *quirc_strerror(quirc_decode_error_t err);
 #define QUIRC_DATA_TYPE_BYTE          4
 #define QUIRC_DATA_TYPE_KANJI         8
 
-struct quirc_code {
-	/* The number of cells across in the QR-code. The cell bitmap
-	 * is a bitmask giving the actual values of cells. If the cell
-	 * at (x, y) is black, then the following bit is set:
-	 *
-	 *     cell_bitmap[i >> 3] & (1 << (i & 7))
-	 *
-	 * where i = (y * size) + x.
-	 */
-	size_t			size;
-	uint8_t			cell_bitmap[QUIRC_MAX_BITMAP];
-};
-
 struct quirc_data {
-	/* Various parameters of the QR-code. These can mostly be
-	 * ignored if you only care about the data.
-	 */
 	int			version;
 	int			ecc_level;
 	int			mask;
@@ -74,9 +59,6 @@ struct quirc_data {
  * QR-code version information database
  */
 
-#define QUIRC_MAX_VERSION     40
-#define QUIRC_MAX_ALIGNMENT   7
-
 struct quirc_rs_params {
 	int             bs; /* Small block size */
 	int             dw; /* Small data words */
@@ -85,7 +67,7 @@ struct quirc_rs_params {
 
 struct quirc_version_info {
 	int				data_bytes;
-	int				apat[QUIRC_MAX_ALIGNMENT];
+	int				apat[QR_ALIGN_MAX];
 	struct quirc_rs_params          ecc[4];
 };
 
@@ -504,16 +486,8 @@ struct datastream {
 	uint8_t         data[QUIRC_MAX_PAYLOAD];
 };
 
-static inline int
-grid_bit(const struct quirc_code *code, unsigned x, unsigned y)
-{
-	int p = y * code->size + x;
-
-	return (code->cell_bitmap[p >> 3] >> (p & 7)) & 1;
-}
-
 static quirc_decode_error_t
-read_format(const struct quirc_code *code,
+read_format(const struct qr *q,
 	struct quirc_data *data, int which)
 {
 	int i;
@@ -524,10 +498,10 @@ read_format(const struct quirc_code *code,
 	if (which) {
 		for (i = 0; i < 7; i++)
 			format = (format << 1) |
-				grid_bit(code, 8, code->size - 1 - i);
+				qr_get_module(q, 8, q->size - 1 - i);
 		for (i = 0; i < 8; i++)
 			format = (format << 1) |
-				grid_bit(code, code->size - 8 + i, 8);
+				qr_get_module(q, q->size - 8 + i, 8);
 	} else {
 		static const int xs[15] = {
 			8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0
@@ -537,7 +511,7 @@ read_format(const struct quirc_code *code,
 		};
 
 		for (i = 14; i >= 0; i--)
-			format = (format << 1) | grid_bit(code, xs[i], ys[i]);
+			format = (format << 1) | qr_get_module(q, xs[i], ys[i]);
 	}
 
 	format ^= 0x5412;
@@ -605,7 +579,7 @@ reserved_cell(int version, int i, int j)
 	}
 
 	/* Exclude alignment patterns */
-	for (a = 0; a < QUIRC_MAX_ALIGNMENT && ver->apat[a]; a++) {
+	for (a = 0; a < QR_ALIGN_MAX && ver->apat[a]; a++) {
 		int p = ver->apat[a];
 
 		if (abs(p - i) < 3)
@@ -628,13 +602,13 @@ reserved_cell(int version, int i, int j)
 }
 
 static void
-read_bit(const struct quirc_code *code,
+read_bit(const struct qr *q,
 	struct quirc_data *data,
 	struct datastream *ds, int i, int j)
 {
-	int bitpos = ds->data_bits & 7;
-	int bytepos = ds->data_bits >> 3;
-	int v = grid_bit(code, j, i);
+	int bitpos  = BM_BIT(ds->data_bits);
+	int bytepos = BM_BYTE(ds->data_bits);
+	int v = qr_get_module(q, j, i);
 
 	if (mask_bit(data->mask, i, j))
 		v ^= 1;
@@ -646,12 +620,12 @@ read_bit(const struct quirc_code *code,
 }
 
 static void
-read_data(const struct quirc_code *code,
+read_data(const struct qr *q,
 	struct quirc_data *data,
 	struct datastream *ds)
 {
-	int y = code->size - 1;
-	int x = code->size - 1;
+	int y = q->size - 1;
+	int x = q->size - 1;
 	int dir = -1;
 
 	while (x > 0) {
@@ -659,13 +633,13 @@ read_data(const struct quirc_code *code,
 			x--;
 
 		if (!reserved_cell(data->version, y, x))
-			read_bit(code, data, ds, y, x);
+			read_bit(q, data, ds, y, x);
 
 		if (!reserved_cell(data->version, y, x - 1))
-			read_bit(code, data, ds, y, x - 1);
+			read_bit(q, data, ds, y, x - 1);
 
 		y += dir;
-		if (y < 0 || y >= (int) code->size) {
+		if (y < 0 || y >= (int) q->size) {
 			dir = -dir;
 			x -= 2;
 			y += dir;
@@ -983,32 +957,32 @@ done:
 }
 
 quirc_decode_error_t
-quirc_decode(const struct quirc_code *code,
+quirc_decode(const struct qr *q,
 	struct quirc_data *data)
 {
 	quirc_decode_error_t err;
 	struct datastream ds;
 
-	if ((code->size - 17) % 4)
+	if ((q->size - 17) % 4)
 		return QUIRC_ERROR_INVALID_GRID_SIZE;
 
 	memset(data, 0, sizeof(*data));
 	memset(&ds, 0, sizeof(ds));
 
-	data->version = (code->size - 17) / 4;
+	data->version = (q->size - 17) / 4;
 
 	if (data->version < 1 ||
-	    data->version > QUIRC_MAX_VERSION)
+	    data->version > QR_VER_MAX)
 		return QUIRC_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
-	err = read_format(code, data, 0);
+	err = read_format(q, data, 0);
 	if (err)
-		err = read_format(code, data, 1);
+		err = read_format(q, data, 1);
 	if (err)
 		return err;
 
-	read_data(code, data, &ds);
+	read_data(q, data, &ds);
 	err = codestream_ecc(data, &ds);
 	if (err)
 		return err;

@@ -6,7 +6,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+
+#include <qr.h>
 
 #include "libqr.c"
 #include "decode.c"
@@ -95,7 +98,7 @@ main(int argc, char * const argv[])
 	/* TODO: iterate over argv[], guess at type for each segment */
 	/* TODO: micro-QR */
 
-	struct qr_code q;
+	struct qr q;
 	uint8_t map[QR_BUF_LEN_MAX];
 	q.map = map;
 	uint8_t tmp[QR_BUF_LEN_MAX];
@@ -114,14 +117,10 @@ main(int argc, char * const argv[])
 	(void) invert;
 
 	{
-		struct quirc_code code;
 		struct quirc_data data;
 		quirc_decode_error_t e;
 
-		code.size = q.size;
-		memcpy(code.cell_bitmap, q.map, q.size * q.size / 8);
-
-		e = quirc_decode(&code, &data);
+		e = quirc_decode(&q, &data);
 
 		if (e) {
 			printf("  Decoding FAILED: %s\n", quirc_strerror(e));

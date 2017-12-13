@@ -1,7 +1,7 @@
 /* 
  * QR Code generator test suite (C)
  * 
- * When compiling this program, the library qrcodegen.c needs QRCODEGEN_TEST
+ * When compiling this program, the library mapgen.c needs QRCODEGEN_TEST
  * to be defined. Run this command line program with no arguments.
  * 
  * Copyright (c) Project Nayuki. (MIT License)
@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include <qr.h>
 
 #include "libqr.c"
 
@@ -354,9 +356,9 @@ TEST
 InitializeFunctionModulesEtc(void)
 {
 	for (int ver = 1; ver <= 40; ver++) {
-		uint8_t *qrcode = malloc(QR_BUF_LEN(ver));
-struct qr_code q = { 0, qrcode };
-		ASSERT(qrcode != NULL);
+		uint8_t *map = malloc(QR_BUF_LEN(ver));
+	struct qr q = { 0, map };
+		ASSERT(map != NULL);
 		draw_init(ver, &q);
 
 		int size = q.size;
@@ -379,7 +381,7 @@ struct qr_code q = { 0, qrcode };
 			}
 		}
 		ASSERT(hasWhite && hasBlack);
-		free(qrcode);
+		free(map);
 	}
 
 	PASS();
@@ -419,8 +421,8 @@ GetAlignmentPatternPositions(void)
 TEST
 GetSetModule(void)
 {
-	uint8_t qrcode[QR_BUF_LEN(23)];
-struct qr_code q = { 0, qrcode };
+	uint8_t map[QR_BUF_LEN(23)];
+	struct qr q = { 0, map };
 	draw_init(23, &q);
 	int size = q.size;
 	
@@ -470,8 +472,8 @@ struct qr_code q = { 0, qrcode };
 TEST
 GetSetModuleRandomly(void)
 {
-	uint8_t qrcode[QR_BUF_LEN(1)];
-struct qr_code q = { 0, qrcode };
+	uint8_t map[QR_BUF_LEN(1)];
+	struct qr q = { 0, map };
 	draw_init(1, &q);
 	int size = q.size;
 	

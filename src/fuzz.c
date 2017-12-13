@@ -11,6 +11,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <qr.h>
+
 #include "libqr.c"
 #include "util.c"
 #include "decode.c"
@@ -38,7 +40,7 @@ struct qr_instance {
 	enum gate gate;
 
 	/* encoded */
-	struct qr_code q;
+	struct qr q;
 	uint8_t map[QR_BUF_LEN_MAX];
 	int qr_errno;
 
@@ -80,7 +82,7 @@ prop_roundtrip(struct theft *t, void *instance)
 
 	{
 		uint8_t tmp[QR_BUF_LEN_MAX];
-		struct qr_code q;
+		struct qr q;
 
 		q.map = o->map;
 
@@ -98,13 +100,9 @@ prop_roundtrip(struct theft *t, void *instance)
 	}
 
 	{
-		struct quirc_code code;
 		quirc_decode_error_t e;
 
-		code.size = o->q.size;
-		memcpy(code.cell_bitmap, o->q.map, o->q.size * o->q.size / 8);
-
-		e = quirc_decode(&code, &data);
+		e = quirc_decode(&o->q, &data);
 
 		if (e) {
 			o->quirc_err = e;

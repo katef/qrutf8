@@ -41,33 +41,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-/* minimum and maximum defined QR Code version numbers for Model 2 */
-#define QR_VER_MIN 1
-#define QR_VER_MAX 40
-
-#define QR_SIZE(ver) ((size_t) (ver) * 4 + 17)
-
-/*
- * The number of bytes needed to store any QR Code up to and including the given version number.
- * For example, 'uint8_t buf[QR_BUF_LEN(25)];'
- * can store any single QR Code from version 1 to 25, inclusive.
- * Requires QR_VER_MIN <= n <= QR_VER_MAX.
- */
-#define QR_BUF_LEN(ver) \
-	((QR_SIZE(ver) * QR_SIZE(ver) + 7) / 8)
-
-/*
- * The worst-case number of bytes needed to store one QR Code, up to and including
- * version 40. This value equals 3918, which is just under 4 kilobytes.
- * Use this more convenient value to avoid calculating tighter memory bounds for buffers.
- */
-#define QR_BUF_LEN_MAX QR_BUF_LEN(QR_VER_MAX)
-
-#define BM_BIT(i)  ((i) & 7)
-#define BM_BYTE(i) ((i) >> 3)
-#define BM_GET(map, i) (((map)[BM_BYTE(i)] >> BM_BIT(i)) & 1)
-#define BM_SET(map, i) do { (map)[BM_BYTE(i)] |=   1U << BM_BIT(i);  } while (0)
-#define BM_CLR(map, i) do { (map)[BM_BYTE(i)] &= ~(1U << BM_BIT(i)); } while (0)
+#include <qr.h>
 
 enum qr_ecl {
 	QR_ECL_LOW = 0,
@@ -104,18 +78,6 @@ enum qr_mode {
 	QR_MODE_BYTE    = 0x4,
 	QR_MODE_KANJI   = 0x8,
 	QR_MODE_ECI     = 0x7
-};
-
-struct qr_code {
-	/*
-	 * The side length of the given QR Code, assuming that encoding succeeded.
-	 * The result is in the range [21, 177]. The length of the array buffer
-	 * is related to the side length; every 'struct qr_code.map[]' must have
-	 * length at least QR_BUF_LEN(ver), which equals ceil(size^2 / 8).
-	 */
-	size_t size;
-
-	uint8_t *map;
 };
 
 /*
@@ -187,9 +149,14 @@ charset_index(const char *charset, char c)
 static inline unsigned
 count_align(unsigned ver)
 {
+	unsigned n;
+
 	assert(QR_VER_MIN <= ver && ver <= QR_VER_MAX);
 
-	return ver / 7 + 2;
+	n = ver / 7 + 2;
+	assert(n <= QR_ALIGN_MAX);
+
+	return n;
 }
 
 /*
@@ -769,7 +736,7 @@ qr_isnumeric(const char *s)
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
 bool
-qr_get_module(const struct qr_code *q, unsigned x, unsigned y)
+qr_get_module(const struct qr *q, unsigned x, unsigned y)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -780,7 +747,7 @@ qr_get_module(const struct qr_code *q, unsigned x, unsigned y)
 
 // Sets the module at the given coordinates, which must be in bounds.
 static void
-set_module(struct qr_code *q, unsigned x, unsigned y, bool v)
+set_module(struct qr *q, unsigned x, unsigned y, bool v)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -795,7 +762,7 @@ set_module(struct qr_code *q, unsigned x, unsigned y, bool v)
 
 // Sets the module at the given coordinates, doing nothing if out of bounds.
 static void
-set_module_bounded(struct qr_code *q, unsigned x, unsigned y, bool v)
+set_module_bounded(struct qr *q, unsigned x, unsigned y, bool v)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -807,7 +774,7 @@ set_module_bounded(struct qr_code *q, unsigned x, unsigned y, bool v)
 
 // Sets every pixel in the range [left : left + width] * [top : top + height] to v.
 static void
-fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr_code *q)
+fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr *q)
 {
 	assert(q != NULL);
 
@@ -825,7 +792,7 @@ fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr_cod
  * array length, in the range [0, 7].
  */
 static int
-getAlignmentPatternPositions(unsigned ver, uint8_t a[static 7])
+getAlignmentPatternPositions(unsigned ver, uint8_t a[static QR_ALIGN_MAX])
 {
 	unsigned i, step, pos;
 	unsigned n;
@@ -856,7 +823,7 @@ getAlignmentPatternPositions(unsigned ver, uint8_t a[static 7])
  * version's size, then marks every function module as v.
  */
 static void
-draw_init(unsigned ver, struct qr_code *q)
+draw_init(unsigned ver, struct qr *q)
 {
 	assert(q != NULL);
 
@@ -898,7 +865,7 @@ draw_init(unsigned ver, struct qr_code *q)
  * marked v (namely by draw_init()), because this may skip redrawing v function modules.
  */
 static void
-draw_white_function_modules(struct qr_code *q, unsigned ver)
+draw_white_function_modules(struct qr *q, unsigned ver)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -966,7 +933,7 @@ draw_white_function_modules(struct qr_code *q, unsigned ver)
  * the format bits, unlike drawWhiteFunctionModules() which might skip v modules.
  */
 static void
-draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr_code *q)
+draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr *q)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -1012,7 +979,7 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr_code *q)
  * and white at codeword modules (including unused remainder bits).
  */
 static void
-draw_codewords(const void *data, size_t len, struct qr_code *q)
+draw_codewords(const void *data, size_t len, struct qr *q)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -1050,7 +1017,7 @@ draw_codewords(const void *data, size_t len, struct qr_code *q)
  * well-formed QR Code symbol needs exactly one mask applied (not zero, not two, etc.).
  */
 static void
-apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
+apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -1058,7 +1025,7 @@ apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
 
 	for (unsigned y = 0; y < q->size; y++) {
 		for (unsigned x = 0; x < q->size; x++) {
-			struct qr_code tmp;
+			struct qr tmp;
 
 			tmp.size = q->size;
 			tmp.map  = (void *) functionModules;
@@ -1093,7 +1060,7 @@ apply_mask(const uint8_t *functionModules, struct qr_code *q, enum qr_mask mask)
  * This is used by the automatic mask choice algorithm to find the mask pattern that yields the lowest score.
  */
 static long
-penalty(const struct qr_code *q)
+penalty(const struct qr *q)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -1209,7 +1176,7 @@ penalty(const struct qr_code *q)
  */
 bool
 qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
-	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr_code *q)
+	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q)
 {
 	assert(segs != NULL || len == 0);
 	assert(QR_VER_MIN <= min && min <= max && max <= QR_VER_MAX);
@@ -1265,7 +1232,7 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 	assert(count % 8 == 0);
 
 	// Draw function and data codeword modules
-	struct qr_code qtmp;
+	struct qr qtmp;
 	qtmp.map = tmp;
 	append_ecl(q->map, ver, ecl, qtmp.map);
 	draw_init(ver, q);
@@ -1315,7 +1282,7 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
  *   data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode_str(const char *s, void *tmp, struct qr_code *q,
+qr_encode_str(const char *s, void *tmp, struct qr *q,
 	enum qr_ecl ecl, unsigned min, unsigned max, enum qr_mask mask, bool boost_ecl)
 {
 	struct qr_segment seg;
@@ -1367,7 +1334,7 @@ error:
  *   data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode_bytes(const void *data, size_t len, void *tmp, struct qr_code *q,
+qr_encode_bytes(const void *data, size_t len, void *tmp, struct qr *q,
 	enum qr_ecl ecl, unsigned min, unsigned max, enum qr_mask mask, bool boost_ecl)
 {
 	struct qr_segment seg;
@@ -1426,7 +1393,7 @@ error:
 }
 
 static void
-qr_print_utf8qb(FILE *f, const struct qr_code *q, bool wide, bool invert)
+qr_print_utf8qb(FILE *f, const struct qr *q, bool wide, bool invert)
 {
 	size_t border;
 
@@ -1492,7 +1459,7 @@ qr_print_utf8qb(FILE *f, const struct qr_code *q, bool wide, bool invert)
 }
 
 static void
-qr_print_xpm(FILE *f, const struct qr_code *q, bool invert)
+qr_print_xpm(FILE *f, const struct qr *q, bool invert)
 {
 	size_t border;
 
