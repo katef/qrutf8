@@ -164,7 +164,7 @@ prop_roundtrip(struct theft *t, void *instance)
 		p = data.payload;
 
 		for (j = 0; j < o->n; j++) {
-			assert(p - data.payload <= data.payload_len);
+			assert(p - data.payload <= (ptrdiff_t) data.payload_len);
 
 			/* XXX: .len's meaning depends on .mode */
 			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
@@ -423,20 +423,9 @@ seg_print(FILE *f, const void *instance, void *env)
 	}
 
 	{
-		const char *dts;
-
-		switch (o->data.data_type) {
-		case QUIRC_DATA_TYPE_NUMERIC: dts = "NUMERIC"; break;
-		case QUIRC_DATA_TYPE_ALPHA:   dts = "ALNUM";   break;
-		case QUIRC_DATA_TYPE_BYTE:    dts = "BYTE";    break;
-		case QUIRC_DATA_TYPE_KANJI:   dts = "KANJI";   break;
-		default: dts = "?"; break;
-		}
-
 		printf("    Version: %d\n", o->data.version);
 		printf("    ECC level: %c\n", "MLHQ"[o->data.ecc_level]);
 		printf("    Mask: %d\n", o->data.mask);
-		printf("    Data type: %d (%s)\n", o->data.data_type, dts);
 
 		if (o->data.eci) {
 			printf("    ECI: %d\n", o->data.eci);
@@ -449,7 +438,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	}
 
 	{
-		printf("    Length: %d\n", o->data.payload_len);
+		printf("    Length: %zu\n", o->data.payload_len);
 		printf("    Payload: %s\n", o->data.payload);
 	}
 

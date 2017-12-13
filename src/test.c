@@ -1069,6 +1069,7 @@ main(int argc, char *argv[])
 	RUN_TEST(GetTotalBits);
 
 	(void) qr_print_utf8qb;
+	(void) qr_print_xpm;
 
 	GREATEST_MAIN_END();
 }
