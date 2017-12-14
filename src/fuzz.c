@@ -23,11 +23,11 @@
 #include "../share/git/greatest/greatest.h"
 
 enum gate {
-	GATE_START,
-	GATE_ENCODED,
-	GATE_DECODED,
-	GATE_METADATA_VERIFIED,
-	GATE_PAYLOAD_VERIFIED
+	GATE_PASS,
+	GATE_FAIL_ENCODED,
+	GATE_FAIL_DECODED,
+	GATE_FAIL_METADATA_VERIFIED,
+	GATE_FAIL_PAYLOAD_VERIFIED
 };
 
 struct qr_instance {
@@ -83,6 +83,8 @@ prop_roundtrip(struct theft *t, void *instance)
 
 	o = instance;
 
+	o->gate = 0;
+
 	{
 		uint8_t tmp[QR_BUF_LEN_MAX];
 		struct qr q;
@@ -95,11 +97,11 @@ prop_roundtrip(struct theft *t, void *instance)
 			}
 
 			o->qr_errno = errno;
+			o->gate = GATE_FAIL_ENCODED;
 			return THEFT_TRIAL_ERROR;
 		}
 
 		o->q = q;
-		o->gate = GATE_ENCODED;
 	}
 
 	{
@@ -109,11 +111,11 @@ prop_roundtrip(struct theft *t, void *instance)
 
 		if (e) {
 			o->quirc_err = e;
+			o->gate = GATE_FAIL_DECODED;
 			return THEFT_TRIAL_FAIL;
 		}
 
 		o->data = data;
-		o->gate = GATE_DECODED;
 	}
 
 	{
@@ -121,6 +123,7 @@ prop_roundtrip(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"mask mismatch: got=%d, expected=%d",
 				data.mask, o->mask);
+			o->gate = GATE_FAIL_METADATA_VERIFIED;
 			return THEFT_TRIAL_FAIL;
 		}
 
@@ -130,6 +133,7 @@ prop_roundtrip(struct theft *t, void *instance)
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
 					ecl[data.ecc_level], o->ecl);
+				o->gate = GATE_FAIL_METADATA_VERIFIED;
 				return THEFT_TRIAL_FAIL;
 			}
 		} else {
@@ -137,6 +141,7 @@ prop_roundtrip(struct theft *t, void *instance)
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
 					ecl[data.ecc_level], o->ecl);
+				o->gate = GATE_FAIL_METADATA_VERIFIED;
 				return THEFT_TRIAL_FAIL;
 			}
 		}
@@ -145,10 +150,9 @@ prop_roundtrip(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"version mismatch: got=%d, expected min=%u, max=%u",
 				data.version, o->min, o->max);
+			o->gate = GATE_FAIL_METADATA_VERIFIED;
 			return THEFT_TRIAL_FAIL;
 		}
-
-		o->gate = GATE_METADATA_VERIFIED;
 	}
 
 	{
@@ -159,6 +163,7 @@ prop_roundtrip(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"payload length mismatch: got=%zu, expected=%zu",
 				(size_t) data.payload_len, seg_len(o->a, o->n));
+			o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
 			return THEFT_TRIAL_FAIL;
 		}
 
@@ -171,13 +176,12 @@ prop_roundtrip(struct theft *t, void *instance)
 			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
+				o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
 				return THEFT_TRIAL_FAIL;
 			}
 
 			p += o->a[j].len;
 		}
-
-		o->gate = GATE_PAYLOAD_VERIFIED;
 	}
 
 	(void) t;
@@ -200,7 +204,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 		return THEFT_ALLOC_ERROR;
 	}
 
-	o->gate = GATE_START;
+	o->gate = GATE_PASS;
 
 	o->ecl       = theft_random_choice(t, 4);
 	o->min       = theft_random_choice(t, QR_VER_MAX - QR_VER_MIN + 1) + QR_VER_MIN;
@@ -410,7 +414,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));
 
-	if (o->gate < GATE_ENCODED) {
+	if (o->gate == GATE_FAIL_ENCODED) {
 		fprintf(stderr, "\nqr_encode_segments: %s\n", strerror(o->qr_errno));
 		return;
 	}
@@ -418,7 +422,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	qr_print_utf8qb(stdout, &o->q, true, true);
 	printf("    Size: %zu\n", o->q.size);
 
-	if (o->gate < GATE_DECODED) {
+	if (o->gate == GATE_FAIL_DECODED) {
 		fprintf(stderr, "quirc_decode: %s\n", quirc_strerror(o->quirc_err));
 		return;
 	}
@@ -433,7 +437,7 @@ seg_print(FILE *f, const void *instance, void *env)
 		}
 	}
 
-	if (o->gate < GATE_METADATA_VERIFIED) {
+	if (o->gate == GATE_FAIL_METADATA_VERIFIED) {
 		printf("metadata verification failed: %s\n", o->v_err);
 		return;
 	}
@@ -443,7 +447,7 @@ seg_print(FILE *f, const void *instance, void *env)
 		printf("    Payload: %s\n", o->data.payload);
 	}
 
-	if (o->gate < GATE_PAYLOAD_VERIFIED) {
+	if (o->gate == GATE_FAIL_PAYLOAD_VERIFIED) {
 		printf("metadata verification failed: %s\n", o->v_err);
 		return;
 	}
