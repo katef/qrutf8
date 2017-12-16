@@ -64,9 +64,18 @@ struct qr {
 bool
 qr_get_module(const struct qr *q, unsigned x, unsigned y);
 
+/*
+ * Flip n randomly-selected modules.
+ * Reserved regions are avoided if skip_reserved is true.
+ */
+void
+qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved);
+
 /* XXX: internal */
 unsigned
 getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX]);
+void
+draw_init(unsigned ver, struct qr *q);
 
 #endif
 

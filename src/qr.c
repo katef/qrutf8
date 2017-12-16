@@ -24,6 +24,7 @@ main(int argc, char * const argv[])
 	bool boost_ecl;
 	bool invert;
 	bool wide;
+	unsigned noise;
 
 	min  = QR_VER_MIN;
 	max  = QR_VER_MAX;
@@ -32,11 +33,12 @@ main(int argc, char * const argv[])
 	boost_ecl = true;
 	invert = true;
 	wide = false;
+	noise = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "rbm:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "rbm:n:e:v:w"), c != -1) {
 			switch (c) {
 			case 'r':
 				invert = false;
@@ -48,6 +50,10 @@ main(int argc, char * const argv[])
 
 			case 'w':
 				wide = true;
+				break;
+
+			case 'n':
+				noise = atoi(optarg); /* XXX */
 				break;
 
 			case 'm':
@@ -108,6 +114,8 @@ main(int argc, char * const argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	qr_noise(&q, noise, 0, false);
+
 	qr_print_utf8qb(stdout, &q, wide, invert);
 /*
 	qr_print_xpm(stdout, &q, invert);
@@ -116,6 +124,7 @@ main(int argc, char * const argv[])
 	(void) qr_print_xpm;
 	(void) wide;
 	(void) invert;
+
 
 	{
 		struct quirc_data data;
@@ -136,6 +145,9 @@ main(int argc, char * const argv[])
 				printf("    ECI: %d\n", data.eci);
 			}
 
+			printf("    Noise: %u\n", noise);
+			printf("    Format corrections: %u\n", data.format_corrections);
+			printf("    Codeword corrections: %u\n", data.codeword_corrections);
 			printf("    Length: %zu\n", data.payload_len);
 			printf("    Payload: %s\n", data.payload);
 		}

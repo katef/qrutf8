@@ -26,6 +26,7 @@ enum gate {
 	GATE_PASS,
 	GATE_FAIL_ENCODED,
 	GATE_FAIL_DECODED,
+	GATE_FAIL_NOISE,
 	GATE_FAIL_METADATA_VERIFIED,
 	GATE_FAIL_PAYLOAD_VERIFIED
 };
@@ -46,6 +47,10 @@ struct qr_instance {
 	struct qr q;
 	uint8_t map[QR_BUF_LEN_MAX];
 	int qr_errno;
+
+	/* noise */
+	unsigned codeword_noise;
+	/* TODO: format_noise */
 
 	/* decoded */
 	struct quirc_data data;
@@ -116,6 +121,158 @@ prop_roundtrip(struct theft *t, void *instance)
 		}
 
 		o->data = data;
+	}
+
+	{
+		if (o->mask != QR_MASK_AUTO && data.mask != o->mask) {
+			snprintf(o->v_err, sizeof o->v_err,
+				"mask mismatch: got=%d, expected=%d",
+				data.mask, o->mask);
+			o->gate = GATE_FAIL_METADATA_VERIFIED;
+			return THEFT_TRIAL_FAIL;
+		}
+
+		enum qr_ecl ecl[] = { QR_ECL_MEDIUM, QR_ECL_LOW, QR_ECL_HIGH, QR_ECL_QUARTILE };
+		if (o->boost_ecl) {
+			if (ecl[data.ecc_level] < o->ecl) {
+				snprintf(o->v_err, sizeof o->v_err,
+					"ecl mismatch: got=%d, expected=%d",
+					ecl[data.ecc_level], o->ecl);
+				o->gate = GATE_FAIL_METADATA_VERIFIED;
+				return THEFT_TRIAL_FAIL;
+			}
+		} else {
+			if (ecl[data.ecc_level] != o->ecl) {
+				snprintf(o->v_err, sizeof o->v_err,
+					"ecl mismatch: got=%d, expected=%d",
+					ecl[data.ecc_level], o->ecl);
+				o->gate = GATE_FAIL_METADATA_VERIFIED;
+				return THEFT_TRIAL_FAIL;
+			}
+		}
+
+		if (data.version < (int) o->min || data.version > (int) o->max) {
+			snprintf(o->v_err, sizeof o->v_err,
+				"version mismatch: got=%d, expected min=%u, max=%u",
+				data.version, o->min, o->max);
+			o->gate = GATE_FAIL_METADATA_VERIFIED;
+			return THEFT_TRIAL_FAIL;
+		}
+	}
+
+	{
+		size_t j;
+		const unsigned char *p;
+
+		if ((size_t) data.payload_len != seg_len(o->a, o->n)) {
+			snprintf(o->v_err, sizeof o->v_err,
+				"payload length mismatch: got=%zu, expected=%zu",
+				(size_t) data.payload_len, seg_len(o->a, o->n));
+			o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
+			return THEFT_TRIAL_FAIL;
+		}
+
+		p = data.payload;
+
+		for (j = 0; j < o->n; j++) {
+			assert(p - data.payload <= (ptrdiff_t) data.payload_len);
+
+			/* XXX: .len's meaning depends on .mode */
+			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
+				snprintf(o->v_err, sizeof o->v_err,
+					"payload data mismatch for segment %zu", j);
+				o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
+				return THEFT_TRIAL_FAIL;
+			}
+
+			p += o->a[j].len;
+		}
+	}
+
+	(void) t;
+
+	return THEFT_TRIAL_PASS;
+}
+
+static enum theft_trial_res
+prop_noise(struct theft *t, void *instance)
+{
+	struct qr_instance *o;
+	struct quirc_data data;
+
+	assert(t != NULL);
+	assert(instance != NULL);
+
+	o = instance;
+
+	{
+		uint8_t tmp[QR_BUF_LEN_MAX];
+		struct qr q;
+
+		q.map = o->map;
+
+		if (!qr_encode_segments(o->a, o->n, o->ecl, o->min, o->max, o->mask, o->boost_ecl, tmp, &q)) {
+			if (errno == EMSGSIZE) {
+				return THEFT_TRIAL_SKIP;
+			}
+
+			o->qr_errno = errno;
+			o->gate = GATE_FAIL_ENCODED;
+			return THEFT_TRIAL_ERROR;
+		}
+
+		o->q = q;
+	}
+
+	{
+		long seed;
+
+		/* XXX: need to add noise in *either* the data or ECC codeword bits,
+		 * not both.
+		 * So until we have more granular regions, we only flip one bit at most.
+		 */
+		o->codeword_noise = theft_random_choice(t, 2);
+#if 0
+		/* QR codes claim to deal with 30% errors max.
+		 * Here we flip up to 50% of bits. */
+		o->codeword_noise = theft_random_choice(t, (o->q.size * o->q.size) / 2);
+#endif
+
+		seed  = theft_random_choice(t, LONG_MAX); /* XXX: ignoring negative values */
+
+		/* TODO: pass function pointer for rand? */
+		qr_noise(&o->q, o->codeword_noise, seed, true);
+	}
+
+	{
+		quirc_decode_error_t e;
+
+		e = quirc_decode(&o->q, &data);
+
+		if (o->codeword_noise > 0 && e == QUIRC_ERROR_DATA_ECC) {
+			return THEFT_TRIAL_SKIP;
+		}
+
+		if (e) {
+			o->quirc_err = e;
+			o->gate = GATE_FAIL_DECODED;
+			return THEFT_TRIAL_FAIL;
+		}
+
+		o->data = data;
+	}
+
+	/* because we skip reserved areas, a flipped bit should always
+	 * result in an ecc correction */
+	if (o->codeword_noise > 0) {
+		if (o->data.codeword_corrections == 0) {
+// XXX: not format_corrections && o->data.format_corrections == 0) {
+			snprintf(o->v_err, sizeof o->v_err,
+				"no corrections: noise=%d",
+				o->codeword_noise);
+			o->gate = GATE_FAIL_NOISE;
+			return THEFT_TRIAL_FAIL;
+		}
 	}
 
 	{
@@ -437,6 +594,17 @@ seg_print(FILE *f, const void *instance, void *env)
 		}
 	}
 
+	{
+		printf("    Noise: %u\n", o->codeword_noise);
+		printf("    Format corrections: %u\n", o->data.format_corrections);
+		printf("    Codeword corrections: %u\n", o->data.codeword_corrections);
+	}
+
+	if (o->gate == GATE_FAIL_NOISE) {
+		fprintf(stderr, "\nqr_noise: %s\n", o->v_err);
+		return;
+	}
+
 	if (o->gate == GATE_FAIL_METADATA_VERIFIED) {
 		printf("metadata verification failed: %s\n", o->v_err);
 		return;
@@ -473,6 +641,24 @@ roundtrip(void *env)
 	FAIL();
 }
 
+TEST
+noise(void *env)
+{
+	struct theft_run_config config = {
+		.name      = "noise",
+		.prop1     = prop_noise,
+		.type_info = { env },
+		.trials    = 100000,
+		.seed      = theft_seed_of_time()
+	};
+
+	if (theft_run(&config) == THEFT_RUN_PASS) {
+		PASS();
+	}
+
+	FAIL();
+}
+
 GREATEST_MAIN_DEFS();
 
 int
@@ -488,6 +674,7 @@ main(int argc, char *argv[])
 	GREATEST_MAIN_BEGIN();
 
 	RUN_TEST1(roundtrip, &seg_info);
+	RUN_TEST1(noise, &seg_info);
 
 	GREATEST_MAIN_END();
 }

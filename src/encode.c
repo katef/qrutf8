@@ -818,7 +818,7 @@ getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX])
  * Clears the given QR Code grid with white modules for the given
  * version's size, then marks every function module as v.
  */
-static void
+void
 draw_init(unsigned ver, struct qr *q)
 {
 	assert(q != NULL);

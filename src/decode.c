@@ -45,6 +45,9 @@ struct quirc_data {
 	int			ecc_level;
 	int			mask;
 
+	unsigned format_corrections;
+	unsigned codeword_corrections;
+
 	/* Data payload. For the Kanji datatype, payload is encoded as
 	 * Shift-JIS. For all other datatypes, payload is ASCII text.
 	 */
@@ -324,8 +327,7 @@ block_syndromes(const uint8_t *data, int bs, int npar, uint8_t *s)
 			if (!c)
 				continue;
 
-			s[i] ^= gf256_exp[((int)gf256_log[c] +
-				    i * j) % 255];
+			s[i] ^= gf256_exp[((int) gf256_log[c] + i * j) % 255];
 		}
 
 		if (s[i])
@@ -369,7 +371,7 @@ eloc_poly(uint8_t *omega,
 
 static quirc_decode_error_t
 correct_block(uint8_t *data,
-	const struct quirc_rs_params *ecc)
+	const struct quirc_rs_params *ecc, unsigned *corrections)
 {
 	int npar = ecc->bs - ecc->dw;
 	uint8_t s[MAX_POLY];
@@ -377,6 +379,8 @@ correct_block(uint8_t *data,
 	uint8_t sigma_deriv[MAX_POLY];
 	uint8_t omega[MAX_POLY];
 	int i;
+
+	*corrections = 0;
 
 	/* Compute syndrome vector */
 	if (!block_syndromes(data, ecc->bs, npar, s))
@@ -402,6 +406,7 @@ correct_block(uint8_t *data,
 			uint8_t error = gf256_exp[(255 - gf256_log[sd_x] +
 						   gf256_log[omega_x]) % 255];
 
+			(*corrections)++;
 			data[ecc->bs - i - 1] ^= error;
 		}
 	}
@@ -446,12 +451,14 @@ format_syndromes(uint16_t u, uint8_t *s)
 }
 
 static quirc_decode_error_t
-correct_format(uint16_t *f_ret)
+correct_format(uint16_t *f_ret, unsigned *corrections)
 {
 	uint16_t u = *f_ret;
 	int i;
 	uint8_t s[MAX_POLY];
 	uint8_t sigma[MAX_POLY];
+
+	*corrections = 0;
 
 	/* Evaluate U (received codeword) at each of alpha_1 .. alpha_6
 	 * to get S_1 .. S_6 (but we index them from 0).
@@ -462,9 +469,12 @@ correct_format(uint16_t *f_ret)
 	berlekamp_massey(s, FORMAT_SYNDROMES, &gf16, sigma);
 
 	/* Now, find the roots of the polynomial */
-	for (i = 0; i < 15; i++)
-		if (!poly_eval(sigma, gf16_exp[15 - i], &gf16))
+	for (i = 0; i < 15; i++) {
+		if (!poly_eval(sigma, gf16_exp[15 - i], &gf16)) {
+			(*corrections)++;
 			u ^= (1 << i);
+		}
+	}
 
 	if (format_syndromes(u, s))
 		return QUIRC_ERROR_FORMAT_ECC;
@@ -515,7 +525,7 @@ read_format(const struct qr *q,
 
 	format ^= 0x5412;
 
-	err = correct_format(&format);
+	err = correct_format(&format, &data->format_corrections);
 	if (err)
 		return err;
 
@@ -680,7 +690,7 @@ codestream_ecc(struct quirc_data *data,
 		for (j = 0; j < num_ec; j++)
 			dst[ecc->dw + j] = ds->raw[ecc_offset + j * bc + i];
 
-		err = correct_block(dst, ecc);
+		err = correct_block(dst, ecc, &data->codeword_corrections);
 		if (err)
 			return err;
 
