@@ -68,6 +68,28 @@ enum qr_mode {
 	QR_MODE_ECI     = 0x7
 };
 
+/* XXX: define in terms of something else */
+#define QR_PAYLOAD_MAX 8896
+
+struct qr_data {
+	unsigned ver;
+	unsigned ecc_level; /* TODO: enum */
+	unsigned mask; /* TODO: enum */
+
+	unsigned format_corrections;
+	unsigned codeword_corrections;
+
+	/*
+	 * Data payload. For the Kanji mode, payload is encoded as Shift-JIS.
+	 * For all other modes, payload is text encoded per the source.
+	 */
+	char payload[QR_PAYLOAD_MAX];
+	size_t payload_len;
+
+	/* ECI assignment number */
+	uint32_t eci;
+};
+
 /*
  * Returns the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).

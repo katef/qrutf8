@@ -127,7 +127,7 @@ main(int argc, char * const argv[])
 
 
 	{
-		struct quirc_data data;
+		struct qr_data data;
 		quirc_decode_error_t e;
 
 		e = quirc_decode(&q, &data);
@@ -137,7 +137,7 @@ main(int argc, char * const argv[])
 		} else {
 			printf("  Decoding successful:\n");
 
-			printf("    Version: %d\n", data.version);
+			printf("    Version: %d\n", data.ver);
 			printf("    ECC level: %c\n", "MLHQ"[data.ecc_level]);
 			printf("    Mask: %d\n", data.mask);
 

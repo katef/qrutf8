@@ -53,7 +53,7 @@ struct qr_instance {
 	/* TODO: format_noise */
 
 	/* decoded */
-	struct quirc_data data;
+	struct qr_data data;
 	quirc_decode_error_t quirc_err;
 
 	/* verified */
@@ -81,7 +81,7 @@ static enum theft_trial_res
 prop_roundtrip(struct theft *t, void *instance)
 {
 	struct qr_instance *o;
-	struct quirc_data data;
+	struct qr_data data;
 
 	assert(t != NULL);
 	assert(instance != NULL);
@@ -124,7 +124,7 @@ prop_roundtrip(struct theft *t, void *instance)
 	}
 
 	{
-		if (o->mask != QR_MASK_AUTO && data.mask != o->mask) {
+		if (o->mask != QR_MASK_AUTO && (enum qr_mask) data.mask != o->mask) {
 			snprintf(o->v_err, sizeof o->v_err,
 				"mask mismatch: got=%d, expected=%d",
 				data.mask, o->mask);
@@ -151,10 +151,10 @@ prop_roundtrip(struct theft *t, void *instance)
 			}
 		}
 
-		if (data.version < (int) o->min || data.version > (int) o->max) {
+		if (data.ver < o->min || data.ver > o->max) {
 			snprintf(o->v_err, sizeof o->v_err,
-				"version mismatch: got=%d, expected min=%u, max=%u",
-				data.version, o->min, o->max);
+				"version mismatch: got=%u, expected min=%u, max=%u",
+				data.ver, o->min, o->max);
 			o->gate = GATE_FAIL_METADATA_VERIFIED;
 			return THEFT_TRIAL_FAIL;
 		}
@@ -162,7 +162,7 @@ prop_roundtrip(struct theft *t, void *instance)
 
 	{
 		size_t j;
-		const unsigned char *p;
+		const char *p;
 
 		if ((size_t) data.payload_len != seg_len(o->a, o->n)) {
 			snprintf(o->v_err, sizeof o->v_err,
@@ -198,7 +198,7 @@ static enum theft_trial_res
 prop_noise(struct theft *t, void *instance)
 {
 	struct qr_instance *o;
-	struct quirc_data data;
+	struct qr_data data;
 
 	assert(t != NULL);
 	assert(instance != NULL);
@@ -276,7 +276,7 @@ prop_noise(struct theft *t, void *instance)
 	}
 
 	{
-		if (o->mask != QR_MASK_AUTO && data.mask != o->mask) {
+		if (o->mask != QR_MASK_AUTO && (enum qr_mask) data.mask != o->mask) {
 			snprintf(o->v_err, sizeof o->v_err,
 				"mask mismatch: got=%d, expected=%d",
 				data.mask, o->mask);
@@ -303,10 +303,10 @@ prop_noise(struct theft *t, void *instance)
 			}
 		}
 
-		if (data.version < (int) o->min || data.version > (int) o->max) {
+		if (data.ver < o->min || data.ver > o->max) {
 			snprintf(o->v_err, sizeof o->v_err,
-				"version mismatch: got=%d, expected min=%u, max=%u",
-				data.version, o->min, o->max);
+				"version mismatch: got=%u, expected min=%u, max=%u",
+				data.ver, o->min, o->max);
 			o->gate = GATE_FAIL_METADATA_VERIFIED;
 			return THEFT_TRIAL_FAIL;
 		}
@@ -314,7 +314,7 @@ prop_noise(struct theft *t, void *instance)
 
 	{
 		size_t j;
-		const unsigned char *p;
+		const char *p;
 
 		if ((size_t) data.payload_len != seg_len(o->a, o->n)) {
 			snprintf(o->v_err, sizeof o->v_err,
@@ -585,7 +585,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	}
 
 	{
-		printf("    Version: %d\n", o->data.version);
+		printf("    Version: %u\n", o->data.ver);
 		printf("    ECC level: %c\n", "MLHQ"[o->data.ecc_level]);
 		printf("    Mask: %d\n", o->data.mask);
 

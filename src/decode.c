@@ -32,27 +32,6 @@ typedef enum {
 
 const char *quirc_strerror(quirc_decode_error_t err);
 
-#define QUIRC_MAX_PAYLOAD	8896
-
-struct quirc_data {
-	int			version;
-	int			ecc_level;
-	int			mask;
-
-	unsigned format_corrections;
-	unsigned codeword_corrections;
-
-	/*
-	 * Data payload. For the Kanji mode, payload is encoded as Shift-JIS.
-	 * For all other modes, payload is text encoded per the source.
-	 */
-	uint8_t			payload[QUIRC_MAX_PAYLOAD];
-	size_t			payload_len;
-
-	/* ECI assignment number */
-	uint32_t		eci;
-};
-
 /************************************************************************
  * QR-code version information database
  */
@@ -482,16 +461,16 @@ correct_format(uint16_t *f_ret, unsigned *corrections)
  */
 
 struct datastream {
-	uint8_t		raw[QUIRC_MAX_PAYLOAD];
+	uint8_t		raw[QR_PAYLOAD_MAX];
 	int		data_bits;
 	int		ptr;
 
-	uint8_t         data[QUIRC_MAX_PAYLOAD];
+	uint8_t         data[QR_PAYLOAD_MAX];
 };
 
 static quirc_decode_error_t
 read_format(const struct qr *q,
-	struct quirc_data *data, int which)
+	struct qr_data *data, int which)
 {
 	int i;
 	uint16_t format = 0;
@@ -608,7 +587,7 @@ reserved_cell(unsigned ver, unsigned x, unsigned y)
 
 static void
 read_bit(const struct qr *q,
-	struct quirc_data *data,
+	struct qr_data *data,
 	struct datastream *ds, int i, int j)
 {
 	int bitpos  = BM_BIT(ds->data_bits);
@@ -626,7 +605,7 @@ read_bit(const struct qr *q,
 
 static void
 read_data(const struct qr *q,
-	struct quirc_data *data,
+	struct qr_data *data,
 	struct datastream *ds)
 {
 	int y = q->size - 1;
@@ -637,10 +616,10 @@ read_data(const struct qr *q,
 		if (x == 6)
 			x--;
 
-		if (!reserved_cell(data->version, y, x))
+		if (!reserved_cell(data->ver, y, x))
 			read_bit(q, data, ds, y, x);
 
-		if (!reserved_cell(data->version, y, x - 1))
+		if (!reserved_cell(data->ver, y, x - 1))
 			read_bit(q, data, ds, y, x - 1);
 
 		y += dir;
@@ -653,11 +632,10 @@ read_data(const struct qr *q,
 }
 
 static quirc_decode_error_t
-codestream_ecc(struct quirc_data *data,
+codestream_ecc(struct qr_data *data,
 	struct datastream *ds)
 {
-	const struct quirc_version_info *ver =
-		&quirc_version_db[data->version];
+	const struct quirc_version_info *ver = &quirc_version_db[data->ver];
 	const struct quirc_rs_params *sb_ecc = &ver->ecc[data->ecc_level];
 	struct quirc_rs_params lb_ecc;
 	const int lb_count =
@@ -723,7 +701,7 @@ take_bits(struct datastream *ds, int len)
 }
 
 static int
-numeric_tuple(struct quirc_data *data,
+numeric_tuple(struct qr_data *data,
 	struct datastream *ds,
 	int bits, int digits)
 {
@@ -745,19 +723,19 @@ numeric_tuple(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_numeric(struct quirc_data *data,
+decode_numeric(struct qr_data *data,
 	struct datastream *ds)
 {
 	int bits = 14;
 	int count;
 
-	if (data->version < 10)
+	if (data->ver < 10)
 		bits = 10;
-	else if (data->version < 27)
+	else if (data->ver < 27)
 		bits = 12;
 
 	count = take_bits(ds, bits);
-	if (data->payload_len + count + 1 > QUIRC_MAX_PAYLOAD)
+	if (data->payload_len + count + 1 > QR_PAYLOAD_MAX)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 3) {
@@ -782,7 +760,7 @@ decode_numeric(struct quirc_data *data,
 }
 
 static int
-alpha_tuple(struct quirc_data *data,
+alpha_tuple(struct qr_data *data,
 	struct datastream *ds,
 	int bits, int digits)
 {
@@ -810,19 +788,19 @@ alpha_tuple(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_alnum(struct quirc_data *data,
+decode_alnum(struct qr_data *data,
 	struct datastream *ds)
 {
 	int bits = 13;
 	int count;
 
-	if (data->version < 10)
+	if (data->ver < 10)
 		bits = 9;
-	else if (data->version < 27)
+	else if (data->ver < 27)
 		bits = 11;
 
 	count = take_bits(ds, bits);
-	if (data->payload_len + count + 1 > QUIRC_MAX_PAYLOAD)
+	if (data->payload_len + count + 1 > QR_PAYLOAD_MAX)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 2) {
@@ -841,18 +819,18 @@ decode_alnum(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_byte(struct quirc_data *data,
+decode_byte(struct qr_data *data,
 	struct datastream *ds)
 {
 	int bits = 16;
 	int count;
 	int i;
 
-	if (data->version < 10)
+	if (data->ver < 10)
 		bits = 8;
 
 	count = take_bits(ds, bits);
-	if (data->payload_len + count + 1 > QUIRC_MAX_PAYLOAD)
+	if (data->payload_len + count + 1 > QR_PAYLOAD_MAX)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 8)
 		return QUIRC_ERROR_DATA_UNDERFLOW;
@@ -864,20 +842,20 @@ decode_byte(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_kanji(struct quirc_data *data,
+decode_kanji(struct qr_data *data,
 	struct datastream *ds)
 {
 	int bits = 12;
 	int count;
 	int i;
 
-	if (data->version < 10)
+	if (data->ver < 10)
 		bits = 8;
-	else if (data->version < 27)
+	else if (data->ver < 27)
 		bits = 10;
 
 	count = take_bits(ds, bits);
-	if (data->payload_len + count * 2 + 1 > QUIRC_MAX_PAYLOAD)
+	if (data->payload_len + count * 2 + 1 > QR_PAYLOAD_MAX)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 13)
 		return QUIRC_ERROR_DATA_UNDERFLOW;
@@ -905,7 +883,7 @@ decode_kanji(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_eci(struct quirc_data *data,
+decode_eci(struct qr_data *data,
 	struct datastream *ds)
 {
 	if (bits_remaining(ds) < 8)
@@ -929,7 +907,7 @@ decode_eci(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_payload(struct quirc_data *data,
+decode_payload(struct qr_data *data,
 	struct datastream *ds)
 {
 	while (bits_remaining(ds) >= 4) {
@@ -963,7 +941,7 @@ done:
 
 quirc_decode_error_t
 quirc_decode(const struct qr *q,
-	struct quirc_data *data)
+	struct qr_data *data)
 {
 	quirc_decode_error_t err;
 	struct datastream ds;
@@ -974,10 +952,9 @@ quirc_decode(const struct qr *q,
 	memset(data, 0, sizeof(*data));
 	memset(&ds, 0, sizeof(ds));
 
-	data->version = QR_VER(q->size);
+	data->ver = QR_VER(q->size);
 
-	if (data->version < 1 ||
-	    data->version > QR_VER_MAX)
+	if (data->ver < 1 || data->ver > QR_VER_MAX)
 		return QUIRC_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
