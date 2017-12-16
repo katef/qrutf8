@@ -546,7 +546,7 @@ mask_bit(int mask, int i, int j)
 static int
 reserved_cell(unsigned ver, unsigned x, unsigned y)
 {
-	size_t size = ver * 4 + 17;
+	size_t size = QR_SIZE(ver);
 	int ax = -1, ay = -1;
 	size_t i;
 
@@ -970,7 +970,7 @@ quirc_decode(const struct qr *q,
 	memset(data, 0, sizeof(*data));
 	memset(&ds, 0, sizeof(ds));
 
-	data->version = (q->size - 17) / 4;
+	data->version = QR_VER(q->size);
 
 	if (data->version < 1 ||
 	    data->version > QR_VER_MAX)

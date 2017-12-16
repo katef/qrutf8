@@ -33,6 +33,7 @@ struct qr {
 #define BM_CLR(map, i) do { (map)[BM_BYTE(i)] &= ~(1U << BM_BIT(i)); } while (0)
 
 #define QR_SIZE(ver) ((size_t) (ver) * 4 + 17)
+#define QR_VER(size) (((unsigned) (size) - 17) / 4)
 
 /* maximum number of alignment patterns */
 #define QR_ALIGN_MAX 7
