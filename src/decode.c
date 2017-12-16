@@ -26,7 +26,6 @@ typedef enum {
 	QUIRC_ERROR_INVALID_VERSION,
 	QUIRC_ERROR_FORMAT_ECC,
 	QUIRC_ERROR_DATA_ECC,
-	QUIRC_ERROR_UNKNOWN_DATA_TYPE,
 	QUIRC_ERROR_DATA_OVERFLOW,
 	QUIRC_ERROR_DATA_UNDERFLOW
 } quirc_decode_error_t;
@@ -34,11 +33,6 @@ typedef enum {
 const char *quirc_strerror(quirc_decode_error_t err);
 
 #define QUIRC_MAX_PAYLOAD	8896
-
-#define QUIRC_DATA_TYPE_NUMERIC       1
-#define QUIRC_DATA_TYPE_ALPHA         2
-#define QUIRC_DATA_TYPE_BYTE          4
-#define QUIRC_DATA_TYPE_KANJI         8
 
 struct quirc_data {
 	int			version;
@@ -48,8 +42,9 @@ struct quirc_data {
 	unsigned format_corrections;
 	unsigned codeword_corrections;
 
-	/* Data payload. For the Kanji datatype, payload is encoded as
-	 * Shift-JIS. For all other datatypes, payload is ASCII text.
+	/*
+	 * Data payload. For the Kanji mode, payload is encoded as Shift-JIS.
+	 * For all other modes, payload is text encoded per the source.
 	 */
 	uint8_t			payload[QUIRC_MAX_PAYLOAD];
 	size_t			payload_len;
@@ -188,7 +183,6 @@ quirc_strerror(quirc_decode_error_t err)
 	case QUIRC_ERROR_INVALID_VERSION:   return "Invalid version";
 	case QUIRC_ERROR_FORMAT_ECC:        return "Format data ECC failure";
 	case QUIRC_ERROR_DATA_ECC:          return "ECC failure";
-	case QUIRC_ERROR_UNKNOWN_DATA_TYPE: return "Unknown data type";
 	case QUIRC_ERROR_DATA_OVERFLOW:     return "Data overflow";
 	case QUIRC_ERROR_DATA_UNDERFLOW:    return "Data underflow";
 
@@ -816,7 +810,7 @@ alpha_tuple(struct quirc_data *data,
 }
 
 static quirc_decode_error_t
-decode_alpha(struct quirc_data *data,
+decode_alnum(struct quirc_data *data,
 	struct datastream *ds)
 {
 	int bits = 13;
@@ -940,14 +934,14 @@ decode_payload(struct quirc_data *data,
 {
 	while (bits_remaining(ds) >= 4) {
 		quirc_decode_error_t err = QUIRC_SUCCESS;
-		int type = take_bits(ds, 4);
+		enum qr_mode mode = take_bits(ds, 4);
 
-		switch (type) {
-		case QUIRC_DATA_TYPE_NUMERIC: err = decode_numeric(data, ds); break;
-		case QUIRC_DATA_TYPE_ALPHA:   err = decode_alpha(data, ds);   break;
-		case QUIRC_DATA_TYPE_BYTE:    err = decode_byte(data, ds);    break;
-		case QUIRC_DATA_TYPE_KANJI:   err = decode_kanji(data, ds);   break;
-		case 7:                       err = decode_eci(data, ds);     break;
+		switch (mode) {
+		case QR_MODE_NUMERIC: err = decode_numeric(data, ds); break;
+		case QR_MODE_ALNUM:   err = decode_alnum(data, ds);   break;
+		case QR_MODE_BYTE:    err = decode_byte(data, ds);    break;
+		case QR_MODE_KANJI:   err = decode_kanji(data, ds);   break;
+		case QR_MODE_ECI:     err = decode_eci(data, ds);     break;
 
 		default:
 			goto done;

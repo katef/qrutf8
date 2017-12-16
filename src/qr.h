@@ -58,6 +58,17 @@ struct qr {
 #define QR_BUF_LEN_MAX QR_BUF_LEN(QR_VER_MAX)
 
 /*
+ * The mode field of a segment.
+ */
+enum qr_mode {
+	QR_MODE_NUMERIC = 0x1,
+	QR_MODE_ALNUM   = 0x2,
+	QR_MODE_BYTE    = 0x4,
+	QR_MODE_KANJI   = 0x8,
+	QR_MODE_ECI     = 0x7
+};
+
+/*
  * Returns the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */

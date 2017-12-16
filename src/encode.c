@@ -70,17 +70,6 @@ enum qr_mask {
 };
 
 /*
- * The mode field of a segment.
- */
-enum qr_mode {
-	QR_MODE_NUMERIC = 0x1,
-	QR_MODE_ALNUM   = 0x2,
-	QR_MODE_BYTE    = 0x4,
-	QR_MODE_KANJI   = 0x8,
-	QR_MODE_ECI     = 0x7
-};
-
-/*
  * A segment of user/application data that a QR Code symbol can convey.
  * Each segment has a mode, a character count, and character/general data that is
  * already encoded as a sequence of bits. The maximum allowed bit length is 32767,
