@@ -177,7 +177,7 @@ free(a);
 	/* because we skip reserved areas, a flipped bit should always
 	 * result in an ecc correction */
 	if ((g & GATE_NOISE) != 0) {
-		if (o->codeword_noise > 0) {
+		if (o->codeword_noise > 0 && seg_len(o->a, o->n) > 0) {
 			if (o->data.codeword_corrections == 0) {
 // XXX: not format_corrections && o->data.format_corrections == 0) {
 				snprintf(o->v_err, sizeof o->v_err,
