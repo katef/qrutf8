@@ -33,10 +33,19 @@ enum gate {
 	GATE_PAYLOAD  = 1 << 4
 };
 
-struct qr_instance {
+struct fuzz_segment {
+	struct qr_segment seg;
+	char buf[(32767 + 7) / 8 + 1]; /* XXX: centralise maths */
+
+	/* source data */
+	char s[QR_PAYLOAD_MAX];
+	size_t len;
+};
+
+struct fuzz_instance {
 	/* input */
 	size_t n;
-	struct qr_segment *a;
+	struct fuzz_segment a[1000]; /* XXX: find max number of segments */
 	enum qr_ecl ecl;
 	unsigned min;
 	unsigned max;
@@ -63,7 +72,7 @@ struct qr_instance {
 };
 
 static size_t
-seg_len(const struct qr_segment *a, size_t n)
+seg_len(const struct fuzz_segment *a, size_t n)
 {
 	size_t len;
 	size_t j;
@@ -82,7 +91,7 @@ seg_len(const struct qr_segment *a, size_t n)
 static enum theft_trial_res
 prop_gated(struct theft *t, void *instance)
 {
-	struct qr_instance *o;
+	struct fuzz_instance *o;
 	struct qr_data data;
 
 	assert(t != NULL);
@@ -94,13 +103,23 @@ prop_gated(struct theft *t, void *instance)
 
 	o = instance;
 
+	o->gate = 0;
+
 	{
 		uint8_t tmp[QR_BUF_LEN_MAX];
+		struct qr_segment *a;
 		struct qr q;
+		size_t i;
+
+		a = xmalloc(sizeof *a * o->n);
+		for (i = 0; i < o->n; i++) {
+			a[i] = o->a[i].seg;
+		}
 
 		q.map = o->map;
 
-		if (!qr_encode_segments(o->a, o->n, o->ecl, o->min, o->max, o->mask, o->boost_ecl, tmp, &q)) {
+		if (!qr_encode_segments(a, o->n, o->ecl, o->min, o->max, o->mask, o->boost_ecl, tmp, &q)) {
+free(a);
 			if (errno == EMSGSIZE) {
 				return THEFT_TRIAL_SKIP;
 			}
@@ -109,6 +128,8 @@ prop_gated(struct theft *t, void *instance)
 			o->gate = GATE_ENCODE;
 			return THEFT_TRIAL_ERROR;
 		}
+
+free(a);
 
 		o->q = q;
 	}
@@ -138,8 +159,10 @@ prop_gated(struct theft *t, void *instance)
 
 		e = quirc_decode(&o->q, &data);
 
-		if (o->codeword_noise > 0 && e == QUIRC_ERROR_DATA_ECC) {
-			return THEFT_TRIAL_SKIP;
+		if ((g & GATE_NOISE) != 0) {
+			if (o->codeword_noise > 0 && e == QUIRC_ERROR_DATA_ECC) {
+				return THEFT_TRIAL_SKIP;
+			}
 		}
 
 		if (e) {
@@ -220,8 +243,22 @@ prop_gated(struct theft *t, void *instance)
 		for (j = 0; j < o->n; j++) {
 			assert(p - data.payload <= (ptrdiff_t) data.payload_len);
 
+			switch (o->a[j].seg.mode) {
+			case QR_MODE_NUMERIC:
+			case QR_MODE_ALNUM:
+			case QR_MODE_BYTE:
+				break;
+
+			case QR_MODE_KANJI:
+			case QR_MODE_ECI:
+				assert(!"unimplemented");
+				break;
+			}
+
+			assert(o->a[j].s != NULL);
+
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
+			if (0 != memcmp(p, o->a[j].s, o->a[j].len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
@@ -240,7 +277,7 @@ prop_gated(struct theft *t, void *instance)
 static enum theft_alloc_res
 seg_alloc(struct theft *t, void *env, void **instance)
 {
-	struct qr_instance *o;
+	struct fuzz_instance *o;
 	size_t j;
 
 	assert(t != NULL);
@@ -256,8 +293,8 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	o->boost_ecl = theft_random_choice(t, 2);
 	o->mask      = theft_random_choice(t, 1 + 8) - 1;
 
-	o->n = theft_random_choice(t, 1000); /* TODO: find upper limit */
-	o->a = xmalloc(sizeof *o->a * o->n);
+	o->n = theft_random_choice(t, sizeof o->a / sizeof *o->a + 1);
+//	o->a = xmalloc(sizeof *o->a * o->n);
 
 	/* TODO: permutate segments */
 	(void) gen_permutation_vector;
@@ -265,76 +302,61 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	for (j = 0; j < o->n; j++) {
 		switch (theft_random_choice(t, 5)) {
 		case 0: {
-			size_t len, i;
-			char *s;
-			void *buf;
+			size_t i;
 
-			buf = xmalloc(QR_BUF_LEN(o->max));
+			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			len = theft_random_choice(t, QR_BUF_LEN(o->max));
-
-			if (qr_calcSegmentBufferSize(QR_MODE_NUMERIC, len) > QR_BUF_LEN(o->max)) {
-				free(buf);
+			if (qr_calcSegmentBufferSize(QR_MODE_NUMERIC, o->a[j].len) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			s = xmalloc(len + 1);
-
-			for (i = 0; i < len; i++) {
-				s[i] = '0' + theft_random_choice(t, 10);
+			for (i = 0; i < o->a[j].len; i++) {
+				o->a[j].s[i] = '0' + theft_random_choice(t, 10);
 			}
-			s[i] = '\0';
+			o->a[j].s[i] = '\0';
 
-			assert(qr_isnumeric(s));
+			assert(qr_isnumeric(o->a[j].s));
 
-			o->a[j] = qr_make_numeric(s, buf);
+			o->a[j].seg = qr_make_numeric(o->a[j].s, o->a[j].buf);
 
-			free(s);
 			break;
 		}
 
 		case 1: {
-			size_t len, i;
-			char *s;
-			void *buf;
+			size_t i;
 
-			buf = xmalloc(QR_BUF_LEN(o->max));
+			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			len = theft_random_choice(t, QR_BUF_LEN(o->max));
-
-			if (qr_calcSegmentBufferSize(QR_MODE_ALNUM, len) > QR_BUF_LEN(o->max)) {
-				free(buf);
+			if (qr_calcSegmentBufferSize(QR_MODE_ALNUM, o->a[j].len) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			s = xmalloc(len + 1);
-
-			for (i = 0; i < len; i++) {
-				s[i] = ALNUM_CHARSET[theft_random_choice(t, sizeof (ALNUM_CHARSET) - 1)];
+			for (i = 0; i < o->a[j].len; i++) {
+				o->a[j].s[i] = ALNUM_CHARSET[theft_random_choice(t, sizeof (ALNUM_CHARSET) - 1)];
 			}
-			s[i] = '\0';
+			o->a[j].s[i] = '\0';
 
-			assert(qr_isalnum(s));
+			assert(qr_isalnum(o->a[j].s));
 
-			o->a[j] = qr_make_alnum(s, buf);
+			o->a[j].seg = qr_make_alnum(o->a[j].s, o->a[j].buf);
 
-			free(s);
 			break;
 		}
 
 		case 2: {
-			size_t len, i;
-			uint8_t *a;
+			size_t i;
 
-			len = theft_random_choice(t, 1000); /* arbitrary legnth */
+			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			a = xmalloc(len);
-
-			for (i = 0; i < len; i++) {
-				a[i] = theft_random_choice(t, UINT8_MAX + 1);
+			if (qr_calcSegmentBufferSize(QR_MODE_BYTE, o->a[j].len) > QR_BUF_LEN(o->max)) {
+				goto skip;
 			}
 
-			o->a[j] = qr_make_bytes(a, len);
+			for (i = 0; i < o->a[j].len; i++) {
+				o->a[j].s[i] = theft_random_choice(t, UINT8_MAX + 1);
+			}
+
+			o->a[j].seg = qr_make_bytes(o->a[j].s, o->a[j].len);
 			break;
 		}
 
@@ -359,11 +381,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 
 skip:
 
-	for (size_t i = 0; i < j; i++) {
-		free((void *) o->a[i].data);
-	}
-
-	free(o->a);
+//	free(o->a);
 	free(o);
 
 	return THEFT_ALLOC_SKIP;
@@ -372,7 +390,7 @@ skip:
 static void
 seg_free(void *instance, void *env)
 {
-	struct qr_instance *o;
+	struct fuzz_instance *o;
 	size_t j;
 
 	(void) env;
@@ -380,10 +398,10 @@ seg_free(void *instance, void *env)
 	o = instance;
 
 	for (j = 0; j < o->n; j++) {
-		free((void *) o->a[j].data);
+//		free((void *) o->a[j].seg.data);
 	}
 
-	free(o->a);
+//	free(o->a);
 
 	free(o);
 }
@@ -391,7 +409,7 @@ seg_free(void *instance, void *env)
 static void
 seg_print(FILE *f, const void *instance, void *env)
 {
-	const struct qr_instance *o;
+	const struct fuzz_instance *o;
 	size_t j;
 
 	assert(f != NULL);
@@ -406,7 +424,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	for (j = 0; j < o->n; j++) {
 		const char *dts;
 
-		switch (o->a[j].mode) {
+		switch (o->a[j].seg.mode) {
 		case QR_MODE_NUMERIC: dts = "NUMERIC"; break;
 		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
 		case QR_MODE_BYTE:    dts = "BYTE";    break;
@@ -414,13 +432,16 @@ seg_print(FILE *f, const void *instance, void *env)
 		default: dts = "?"; break;
 		}
 
-		printf("      %zu: %d (%s)", j, o->a[j].mode, dts);
-		if (qr_isalnum(o->a[j].data) || qr_isnumeric(o->a[j].data)) {
+		printf("      %zu: %d (%s)", j, o->a[j].seg.mode, dts);
+/* XXX:
+		if (qr_isalnum(o->a[j].seg.data) || qr_isnumeric(o->a[j].seg.data)) {
 			printf(" \"%.*s\"\n",
-				(int) o->a[j].len, (const char *) o->a[j].data);
-		} else {
+				(int) o->a[j].seg.len, (const char *) o->a[j].seg.data);
+		} else
+*/
+{
 			printf(":\n");
-			hexdump(stdout, o->a[j].data, o->a[j].len);
+			hexdump(stdout, o->a[j].seg.data, o->a[j].seg.len);
 		}
 	}
 	printf("    }\n");
@@ -487,7 +508,7 @@ roundtrip(void *env)
 		.hooks     = { .env = & (enum gate) { GATE_PASS } },
 		.type_info = { env },
 		.trials    = 100000,
-		.seed      = theft_seed_of_time()
+		.seed      = 0xf5eabf7097b93381 // theft_seed_of_time()
 	};
 
 	if (theft_run(&config) == THEFT_RUN_PASS) {
