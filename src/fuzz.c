@@ -26,11 +26,11 @@
 
 enum gate {
 	GATE_PASS,
-	GATE_FAIL_ENCODED,
-	GATE_FAIL_DECODED,
-	GATE_FAIL_NOISE,
-	GATE_FAIL_METADATA_VERIFIED,
-	GATE_FAIL_PAYLOAD_VERIFIED
+	GATE_ENCODE   = 1 << 0,
+	GATE_DECODE   = 1 << 1,
+	GATE_NOISE    = 1 << 2,
+	GATE_METADATA = 1 << 3,
+	GATE_PAYLOAD  = 1 << 4
 };
 
 struct qr_instance {
@@ -80,7 +80,7 @@ seg_len(const struct qr_segment *a, size_t n)
 }
 
 static enum theft_trial_res
-prop_roundtrip(struct theft *t, void *instance)
+prop_gated(struct theft *t, void *instance)
 {
 	struct qr_instance *o;
 	struct qr_data data;
@@ -88,122 +88,9 @@ prop_roundtrip(struct theft *t, void *instance)
 	assert(t != NULL);
 	assert(instance != NULL);
 
-	o = instance;
+	const enum gate g = * (const enum gate *) theft_hook_get_env(t);
 
-	o->gate = 0;
-
-	{
-		uint8_t tmp[QR_BUF_LEN_MAX];
-		struct qr q;
-
-		q.map = o->map;
-
-		if (!qr_encode_segments(o->a, o->n, o->ecl, o->min, o->max, o->mask, o->boost_ecl, tmp, &q)) {
-			if (errno == EMSGSIZE) {
-				return THEFT_TRIAL_SKIP;
-			}
-
-			o->qr_errno = errno;
-			o->gate = GATE_FAIL_ENCODED;
-			return THEFT_TRIAL_ERROR;
-		}
-
-		o->q = q;
-	}
-
-	{
-		quirc_decode_error_t e;
-
-		e = quirc_decode(&o->q, &data);
-
-		if (e) {
-			o->quirc_err = e;
-			o->gate = GATE_FAIL_DECODED;
-			return THEFT_TRIAL_FAIL;
-		}
-
-		o->data = data;
-	}
-
-	{
-		if (o->mask != QR_MASK_AUTO && (enum qr_mask) data.mask != o->mask) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"mask mismatch: got=%d, expected=%d",
-				data.mask, o->mask);
-			o->gate = GATE_FAIL_METADATA_VERIFIED;
-			return THEFT_TRIAL_FAIL;
-		}
-
-		enum qr_ecl ecl[] = { QR_ECL_MEDIUM, QR_ECL_LOW, QR_ECL_HIGH, QR_ECL_QUARTILE };
-		if (o->boost_ecl) {
-			if (ecl[data.ecc_level] < o->ecl) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"ecl mismatch: got=%d, expected=%d",
-					ecl[data.ecc_level], o->ecl);
-				o->gate = GATE_FAIL_METADATA_VERIFIED;
-				return THEFT_TRIAL_FAIL;
-			}
-		} else {
-			if (ecl[data.ecc_level] != o->ecl) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"ecl mismatch: got=%d, expected=%d",
-					ecl[data.ecc_level], o->ecl);
-				o->gate = GATE_FAIL_METADATA_VERIFIED;
-				return THEFT_TRIAL_FAIL;
-			}
-		}
-
-		if (data.ver < o->min || data.ver > o->max) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"version mismatch: got=%u, expected min=%u, max=%u",
-				data.ver, o->min, o->max);
-			o->gate = GATE_FAIL_METADATA_VERIFIED;
-			return THEFT_TRIAL_FAIL;
-		}
-	}
-
-	{
-		size_t j;
-		const char *p;
-
-		if ((size_t) data.payload_len != seg_len(o->a, o->n)) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"payload length mismatch: got=%zu, expected=%zu",
-				(size_t) data.payload_len, seg_len(o->a, o->n));
-			o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
-			return THEFT_TRIAL_FAIL;
-		}
-
-		p = data.payload;
-
-		for (j = 0; j < o->n; j++) {
-			assert(p - data.payload <= (ptrdiff_t) data.payload_len);
-
-			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"payload data mismatch for segment %zu", j);
-				o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
-				return THEFT_TRIAL_FAIL;
-			}
-
-			p += o->a[j].len;
-		}
-	}
-
-	(void) t;
-
-	return THEFT_TRIAL_PASS;
-}
-
-static enum theft_trial_res
-prop_noise(struct theft *t, void *instance)
-{
-	struct qr_instance *o;
-	struct qr_data data;
-
-	assert(t != NULL);
-	assert(instance != NULL);
+	assert(g == GATE_PASS || g == GATE_NOISE);
 
 	o = instance;
 
@@ -219,14 +106,14 @@ prop_noise(struct theft *t, void *instance)
 			}
 
 			o->qr_errno = errno;
-			o->gate = GATE_FAIL_ENCODED;
+			o->gate = GATE_ENCODE;
 			return THEFT_TRIAL_ERROR;
 		}
 
 		o->q = q;
 	}
 
-	{
+	if ((g & GATE_NOISE) != 0) {
 		long seed;
 
 		/* XXX: need to add noise in *either* the data or ECC codeword bits,
@@ -257,7 +144,7 @@ prop_noise(struct theft *t, void *instance)
 
 		if (e) {
 			o->quirc_err = e;
-			o->gate = GATE_FAIL_DECODED;
+			o->gate = GATE_DECODE;
 			return THEFT_TRIAL_FAIL;
 		}
 
@@ -266,14 +153,16 @@ prop_noise(struct theft *t, void *instance)
 
 	/* because we skip reserved areas, a flipped bit should always
 	 * result in an ecc correction */
-	if (o->codeword_noise > 0) {
-		if (o->data.codeword_corrections == 0) {
+	if ((g & GATE_NOISE) != 0) {
+		if (o->codeword_noise > 0) {
+			if (o->data.codeword_corrections == 0) {
 // XXX: not format_corrections && o->data.format_corrections == 0) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"no corrections: noise=%d",
-				o->codeword_noise);
-			o->gate = GATE_FAIL_NOISE;
-			return THEFT_TRIAL_FAIL;
+				snprintf(o->v_err, sizeof o->v_err,
+					"no corrections: noise=%d",
+					o->codeword_noise);
+				o->gate = GATE_NOISE;
+				return THEFT_TRIAL_FAIL;
+			}
 		}
 	}
 
@@ -282,7 +171,7 @@ prop_noise(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"mask mismatch: got=%d, expected=%d",
 				data.mask, o->mask);
-			o->gate = GATE_FAIL_METADATA_VERIFIED;
+			o->gate = GATE_METADATA;
 			return THEFT_TRIAL_FAIL;
 		}
 
@@ -292,7 +181,7 @@ prop_noise(struct theft *t, void *instance)
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
 					ecl[data.ecc_level], o->ecl);
-				o->gate = GATE_FAIL_METADATA_VERIFIED;
+				o->gate = GATE_METADATA;
 				return THEFT_TRIAL_FAIL;
 			}
 		} else {
@@ -300,7 +189,7 @@ prop_noise(struct theft *t, void *instance)
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
 					ecl[data.ecc_level], o->ecl);
-				o->gate = GATE_FAIL_METADATA_VERIFIED;
+				o->gate = GATE_METADATA;
 				return THEFT_TRIAL_FAIL;
 			}
 		}
@@ -309,7 +198,7 @@ prop_noise(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"version mismatch: got=%u, expected min=%u, max=%u",
 				data.ver, o->min, o->max);
-			o->gate = GATE_FAIL_METADATA_VERIFIED;
+			o->gate = GATE_METADATA;
 			return THEFT_TRIAL_FAIL;
 		}
 	}
@@ -322,7 +211,7 @@ prop_noise(struct theft *t, void *instance)
 			snprintf(o->v_err, sizeof o->v_err,
 				"payload length mismatch: got=%zu, expected=%zu",
 				(size_t) data.payload_len, seg_len(o->a, o->n));
-			o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
+			o->gate = GATE_PAYLOAD;
 			return THEFT_TRIAL_FAIL;
 		}
 
@@ -335,7 +224,7 @@ prop_noise(struct theft *t, void *instance)
 			if (0 != memcmp(p, o->a[j].data, o->a[j].len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
-				o->gate = GATE_FAIL_PAYLOAD_VERIFIED;
+				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
 
@@ -537,7 +426,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));
 
-	if (o->gate == GATE_FAIL_ENCODED) {
+	if (o->gate == GATE_ENCODE) {
 		fprintf(stderr, "\nqr_encode_segments: %s\n", strerror(o->qr_errno));
 		return;
 	}
@@ -545,7 +434,7 @@ seg_print(FILE *f, const void *instance, void *env)
 	qr_print_utf8qb(stdout, &o->q, true, true);
 	printf("    Size: %zu\n", o->q.size);
 
-	if (o->gate == GATE_FAIL_DECODED) {
+	if (o->gate == GATE_DECODE) {
 		fprintf(stderr, "quirc_decode: %s\n", quirc_strerror(o->quirc_err));
 		return;
 	}
@@ -566,12 +455,12 @@ seg_print(FILE *f, const void *instance, void *env)
 		printf("    Codeword corrections: %u\n", o->data.codeword_corrections);
 	}
 
-	if (o->gate == GATE_FAIL_NOISE) {
+	if (o->gate == GATE_NOISE) {
 		fprintf(stderr, "\nqr_noise: %s\n", o->v_err);
 		return;
 	}
 
-	if (o->gate == GATE_FAIL_METADATA_VERIFIED) {
+	if (o->gate == GATE_METADATA) {
 		printf("metadata verification failed: %s\n", o->v_err);
 		return;
 	}
@@ -581,7 +470,7 @@ seg_print(FILE *f, const void *instance, void *env)
 		printf("    Payload: %s\n", o->data.payload);
 	}
 
-	if (o->gate == GATE_FAIL_PAYLOAD_VERIFIED) {
+	if (o->gate == GATE_PAYLOAD) {
 		printf("metadata verification failed: %s\n", o->v_err);
 		return;
 	}
@@ -594,7 +483,8 @@ roundtrip(void *env)
 {
 	struct theft_run_config config = {
 		.name      = "roundtrip",
-		.prop1     = prop_roundtrip,
+		.prop1     = prop_gated,
+		.hooks     = { .env = & (enum gate) { GATE_PASS } },
 		.type_info = { env },
 		.trials    = 100000,
 		.seed      = theft_seed_of_time()
@@ -612,7 +502,8 @@ noise(void *env)
 {
 	struct theft_run_config config = {
 		.name      = "noise",
-		.prop1     = prop_noise,
+		.prop1     = prop_gated,
+		.hooks     = { .env = & (enum gate) { GATE_NOISE } },
 		.type_info = { env },
 		.trials    = 100000,
 		.seed      = theft_seed_of_time()
