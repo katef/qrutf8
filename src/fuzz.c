@@ -71,6 +71,45 @@ struct fuzz_instance {
 	char v_err[256];
 };
 
+/* len is as per strlen (number of bytes - 1 for the terminator) */
+static void
+fuzz_str(struct theft *t, char *s, size_t len, const char *charset)
+{
+	size_t i;
+	size_t n;
+
+	assert(t != NULL);
+	assert(s != NULL);
+	assert(charset != NULL);
+
+	n = strlen(charset);
+
+	for (i = 0; i < len; i++) {
+		s[i] = charset[theft_random_choice(t, n)];
+	}
+	s[i] = '\0';
+
+	/* TODO: permutate string */
+}
+
+/* len is number of bytes */
+static void
+fuzz_bytes(struct theft *t, void *p, size_t len)
+{
+	unsigned char *q;
+	size_t i;
+
+	assert(t != NULL);
+
+	q = p;
+
+	for (i = 0; i < len; i++) {
+		q[i] = theft_random_choice(t, UCHAR_MAX + 1);
+	}
+
+	/* TODO: permutate string */
+}
+
 static size_t
 seg_len(const struct fuzz_segment *a, size_t n)
 {
@@ -300,72 +339,63 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	(void) gen_permutation_vector;
 
 	for (j = 0; j < o->n; j++) {
-		switch (theft_random_choice(t, 5)) {
-		case 0: {
-			size_t i;
+		enum qr_mode mode;
 
+		enum qr_mode m[] = {
+			QR_MODE_NUMERIC,
+			QR_MODE_ALNUM,
+			QR_MODE_BYTE,
+			QR_MODE_KANJI,
+			QR_MODE_ECI
+		};
+
+		mode = m[theft_random_choice(t, sizeof m / sizeof *m)];
+
+		switch (mode) {
+		case QR_MODE_NUMERIC:
 			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			if (qr_calcSegmentBufferSize(QR_MODE_NUMERIC, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			for (i = 0; i < o->a[j].len; i++) {
-				o->a[j].s[i] = '0' + theft_random_choice(t, 10);
-			}
-			o->a[j].s[i] = '\0';
-
+			fuzz_str(t, o->a[j].s, o->a[j].len, "0123456789");
+			assert(strlen(o->a[j].s) == o->a[j].len);
 			assert(qr_isnumeric(o->a[j].s));
-
 			o->a[j].seg = qr_make_numeric(o->a[j].s, o->a[j].buf);
-
 			break;
-		}
 
-		case 1: {
-			size_t i;
-
+		case QR_MODE_ALNUM:
 			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			if (qr_calcSegmentBufferSize(QR_MODE_ALNUM, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			for (i = 0; i < o->a[j].len; i++) {
-				o->a[j].s[i] = ALNUM_CHARSET[theft_random_choice(t, sizeof (ALNUM_CHARSET) - 1)];
-			}
-			o->a[j].s[i] = '\0';
-
+			fuzz_str(t, o->a[j].s, o->a[j].len, ALNUM_CHARSET);
+			assert(strlen(o->a[j].s) == o->a[j].len);
 			assert(qr_isalnum(o->a[j].s));
-
 			o->a[j].seg = qr_make_alnum(o->a[j].s, o->a[j].buf);
-
 			break;
-		}
 
-		case 2: {
-			size_t i;
-
+		case QR_MODE_BYTE: {
 			o->a[j].len = theft_random_choice(t, sizeof o->a[j].s);
 
-			if (qr_calcSegmentBufferSize(QR_MODE_BYTE, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			for (i = 0; i < o->a[j].len; i++) {
-				o->a[j].s[i] = theft_random_choice(t, UINT8_MAX + 1);
-			}
-
+			fuzz_bytes(t, o->a[j].s, o->a[j].len);
 			o->a[j].seg = qr_make_bytes(o->a[j].s, o->a[j].len);
 			break;
 		}
 
-		case 3:
-			/* XXX: QR_MODE_KANJI not implemented */
+		case QR_MODE_KANJI:
+			/* XXX: not implemented */
 			goto skip;
 
-		case 4:
-			/* XXX: QR_MODE_ECI not implemented */
+		case QR_MODE_ECI:
+			/* XXX: not implemented */
 			goto skip;
 
 		default:
