@@ -1170,15 +1170,15 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 	// Find the minimal version number to use
 	unsigned ver;
 	int dataUsedBits;
-	for (ver = min; ver < max; ver++) {
+	for (ver = min; ; ver++) {
 		int dataCapacityBits = count_codewords(ver, ecl) * 8;  // Number of data bits available
 		dataUsedBits = count_total_bits(segs, len, ver);
 		if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits)
 			break;  // This version number is found to be suitable
-	}
-	if (ver >= max) {  // All versions in the range could not fit the given data
-		errno = EMSGSIZE;
-		return false;
+		if (ver >= max) {  // All versions in the range could not fit the given data
+			errno = EMSGSIZE;
+			return false;
+		}
 	}
 	assert(dataUsedBits != -1);
 
