@@ -69,38 +69,6 @@ enum qr_mask {
 	QR_MASK_7
 };
 
-/*
- * A segment of user/application data that a QR Code symbol can convey.
- * Each segment has a mode, a character count, and character/general data that is
- * already encoded as a sequence of bits. The maximum allowed bit length is 32767,
- * because even the largest QR Code (version 40) has only 31329 modules.
- */
-struct qr_segment {
-	// The mode indicator for this segment.
-	enum qr_mode mode;
-
-	/*
-	 * The length of this segment's unencoded data. Always in the range [0, 32767].
-	 * For numeric, alphanumeric, and kanji modes, this measures in Unicode code points.
-	 * For byte mode, this measures in bytes (raw binary data, text in UTF-8, or other encodings).
-	 * For ECI mode, this is always zero.
-	 */
-/* XXX: i don't understand why this is neccessary */
-	size_t len;
-
-	/*
-	 * The data bits of this segment, packed in bitwise big endian.
-	 * Can be null if the bit length is zero.
-	 */
-	const void *data;
-
-	/*
-	 * The number of valid data bits used in the buffer. Requires
-	 * 0 <= count <= 32767, and count <= (capacity of data array) * 8.
-	 */
-	size_t count;
-};
-
 static const int8_t ECL_CODEWORDS_PER_BLOCK[4][41] = {
 	// Version: (note that index 0 is for padding, and is set to an illegal value)
 	// 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
@@ -322,6 +290,7 @@ count_total_bits(const struct qr_segment segs[], size_t n, unsigned ver)
 		assert(0 <= ccbits && ccbits <= 16);
 
 		// Fail if segment length value doesn't fit in the length field's bit-width
+		/* XXX: i don't understand why this is neccessary; remove .len from the encoder? */
 		if (segs[i].len >= (1UL << ccbits))
 			return -1;
 

@@ -91,6 +91,37 @@ struct qr_data {
 };
 
 /*
+ * A segment of user/application data that a QR Code symbol can convey.
+ */
+struct qr_segment {
+	enum qr_mode mode;
+
+	/*
+	 * The length of this segment's unencoded data.
+	 * Always in the range [0, 32767]. The maximum bit length is 32767,
+	 * because the largest QR Code (version 40) has only 31329 modules.
+	 *
+	 * For numeric, alphanumeric, and kanji modes, this measures in
+	 * Unicode code points. For byte mode, this measures in bytes
+	 * (raw binary data, text in UTF-8, or other encodings).
+	 * For ECI mode, this is always zero.
+	 */
+	size_t len;
+
+	/*
+	 * Encoded data bits for this segment, packed in bitwise big endian.
+	 * Set NULL if the bit length is zero.
+	 */
+	const void *data;
+
+	/*
+	 * The number of valid data bits used in the buffer. Requires
+	 * 0 <= count <= 32767, and count <= (capacity of data array) * 8.
+	 */
+	size_t count;
+};
+
+/*
  * Returns the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
