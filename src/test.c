@@ -35,6 +35,8 @@
 
 #include <qr.h>
 
+#include "xalloc.h"
+
 #include "encode.c"
 
 #include "../share/git/greatest/greatest.h"
@@ -94,11 +96,11 @@ static uint8_t *append_eclReference(const uint8_t *data, int version, enum qr_ec
 	int shortBlockLen = rawCodewords / numBlocks;
 	
 	// Split data into blocks and append ECC to each block
-	uint8_t **blocks = malloc(numBlocks * sizeof (uint8_t*));
-	uint8_t *generator = malloc(blockEccLen);
+	uint8_t **blocks = xmalloc(numBlocks * sizeof (uint8_t*));
+	uint8_t *generator = xmalloc(blockEccLen);
 	reed_solomon_generator(blockEccLen, generator);
 	for (int i = 0, k = 0; i < numBlocks; i++) {
-		uint8_t *block = malloc(shortBlockLen + 1);
+		uint8_t *block = xmalloc(shortBlockLen + 1);
 		int blockDataLen = shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1);
 		memcpy(block, &data[k], blockDataLen * sizeof(uint8_t));
 		reed_solomon_remainder(&data[k], blockDataLen, generator, blockEccLen, &block[shortBlockLen + 1 - blockEccLen]);
@@ -108,7 +110,7 @@ static uint8_t *append_eclReference(const uint8_t *data, int version, enum qr_ec
 	free(generator);
 	
 	// Interleave (not concatenate) the bytes from every block into a single sequence
-	uint8_t *result = malloc(rawCodewords);
+	uint8_t *result = xmalloc(rawCodewords);
 	for (int i = 0, k = 0; i < shortBlockLen + 1; i++) {
 		for (int j = 0; j < numBlocks; j++) {
 			// Skip the padding byte in short blocks
@@ -131,15 +133,15 @@ AppendErrorCorrection(void)
 	for (int version = 1; version <= 40; version++) {
 		for (int ecl = 0; ecl < 4; ecl++) {
 			int dataLen = count_codewords(version, (enum qr_ecl)ecl);
-			uint8_t *pureData = malloc(dataLen);
+			uint8_t *pureData = xmalloc(dataLen);
 			for (int i = 0; i < dataLen; i++)
 				pureData[i] = rand() % 256;
 			uint8_t *expectOutput = append_eclReference(pureData, version, (enum qr_ecl)ecl);
 			
 			int dataAndEccLen = count_data_bits(version) / 8;
-			uint8_t *paddedData = malloc(dataAndEccLen);
+			uint8_t *paddedData = xmalloc(dataAndEccLen);
 			memcpy(paddedData, pureData, dataLen * sizeof(uint8_t));
-			uint8_t *actualOutput = malloc(dataAndEccLen);
+			uint8_t *actualOutput = xmalloc(dataAndEccLen);
 			append_ecl(paddedData, version, (enum qr_ecl)ecl, actualOutput);
 			
 			ASSERT_EQ(memcmp(actualOutput, expectOutput, dataAndEccLen * sizeof(uint8_t)), 0);
@@ -356,7 +358,7 @@ TEST
 InitializeFunctionModulesEtc(void)
 {
 	for (int ver = 1; ver <= 40; ver++) {
-		uint8_t *map = malloc(QR_BUF_LEN(ver));
+		uint8_t *map = xmalloc(QR_BUF_LEN(ver));
 	struct qr q = { 0, map };
 		ASSERT(map != NULL);
 		draw_init(ver, &q);

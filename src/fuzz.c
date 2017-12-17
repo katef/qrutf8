@@ -14,6 +14,8 @@
 #include <qr.h>
 #include <print.h>
 
+#include "xalloc.h"
+
 #include "encode.c"
 #include "decode.c"
 #include "util.c"
@@ -356,11 +358,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	assert(env == NULL);
 	assert(instance != NULL);
 
-	o = malloc(sizeof *o);
-	if (o == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
-
+	o = xmalloc(sizeof *o);
 	o->gate = GATE_PASS;
 
 	o->ecl       = theft_random_choice(t, 4);
@@ -370,11 +368,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	o->mask      = theft_random_choice(t, 1 + 8) - 1;
 
 	o->n = theft_random_choice(t, 1000); /* TODO: find upper limit */
-	o->a = malloc(sizeof *o->a * o->n);
-	if (o->a == NULL) {
-		free(o);
-		return THEFT_ALLOC_ERROR;
-	}
+	o->a = xmalloc(sizeof *o->a * o->n);
 
 	/* TODO: permutate segments */
 	(void) gen_permutation_vector;
@@ -386,10 +380,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 			char *s;
 			void *buf;
 
-			buf = malloc(QR_BUF_LEN(o->max));
-			if (buf == NULL) {
-				goto error;
-			}
+			buf = xmalloc(QR_BUF_LEN(o->max));
 
 			len = theft_random_choice(t, QR_BUF_LEN(o->max));
 
@@ -398,11 +389,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 				goto skip;
 			}
 
-			s = malloc(len + 1);
-			if (s == NULL) {
-				free(buf);
-				goto error;
-			}
+			s = xmalloc(len + 1);
 
 			for (i = 0; i < len; i++) {
 				s[i] = '0' + theft_random_choice(t, 10);
@@ -422,10 +409,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 			char *s;
 			void *buf;
 
-			buf = malloc(QR_BUF_LEN(o->max));
-			if (buf == NULL) {
-				goto error;
-			}
+			buf = xmalloc(QR_BUF_LEN(o->max));
 
 			len = theft_random_choice(t, QR_BUF_LEN(o->max));
 
@@ -434,11 +418,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 				goto skip;
 			}
 
-			s = malloc(len + 1);
-			if (s == NULL) {
-				free(buf);
-				goto error;
-			}
+			s = xmalloc(len + 1);
 
 			for (i = 0; i < len; i++) {
 				s[i] = ALNUM_CHARSET[theft_random_choice(t, sizeof (ALNUM_CHARSET) - 1)];
@@ -459,10 +439,7 @@ seg_alloc(struct theft *t, void *env, void **instance)
 
 			len = theft_random_choice(t, 1000); /* arbitrary legnth */
 
-			a = malloc(len);
-			if (a == NULL) {
-				goto error;
-			}
+			a = xmalloc(len);
 
 			for (i = 0; i < len; i++) {
 				a[i] = theft_random_choice(t, UINT8_MAX + 1);
@@ -490,17 +467,6 @@ seg_alloc(struct theft *t, void *env, void **instance)
 	*instance = o;
 
 	return THEFT_ALLOC_OK;
-
-error:
-
-	for (size_t i = 0; i < j; i++) {
-		free((void *) o->a[i].data);
-	}
-
-	free(o->a);
-	free(o);
-
-	return THEFT_ALLOC_ERROR;
 
 skip:
 
