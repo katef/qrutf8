@@ -432,17 +432,15 @@ seg_print(FILE *f, const void *instance, void *env)
 		default: dts = "?"; break;
 		}
 
-		printf("      %zu: %d (%s)", j, o->a[j].seg.mode, dts);
-/* XXX:
-		if (qr_isalnum(o->a[j].seg.data) || qr_isnumeric(o->a[j].seg.data)) {
-			printf(" \"%.*s\"\n",
-				(int) o->a[j].seg.len, (const char *) o->a[j].seg.data);
-		} else
-*/
-{
-			printf(":\n");
-			hexdump(stdout, o->a[j].seg.data, o->a[j].seg.len);
+		printf("      %zu: %d (%s)\n", j, o->a[j].seg.mode, dts);
+		printf("      source string: len=%zu bytes\n", o->a[j].len);
+		if (qr_isalnum(o->a[j].s) || qr_isnumeric(o->a[j].s)) {
+			printf("      \"%s\"\n", o->a[j].s);
+		} else {
+			hexdump(stdout, (void *) o->a[j].s, o->a[j].len);
 		}
+		printf("      encoded data: count=%zu bits\n", o->a[j].seg.count);
+		hexdump(stdout, o->a[j].seg.data, (o->a[j].seg.count + 7) / 8);
 	}
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));
