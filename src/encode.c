@@ -426,6 +426,7 @@ append_ecl(void *data, unsigned ver, enum qr_ecl ecl, uint8_t result[])
 	int numShortBlocks = numBlocks - rawCodewords % numBlocks;
 	int ecc_bs = rawCodewords / numBlocks;
 	int shortBlockDataLen = ecc_bs - blockEccLen;
+//fprintf(stderr, "\nnumBlocks=%d - numshortBlocks=%d = %d\n", numBlocks, numShortBlocks, numBlocks - numShortBlocks);
 
 	// Split data into blocks and append ECL after all data
 	uint8_t generator[30];

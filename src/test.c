@@ -24,6 +24,24 @@
  *   Software.
  */
 
+/* portions adapted from: */
+
+/* quirc -- QR-code recognition library
+ * Copyright (C) 2010-2012 Daniel Beer <dlbeer@gmail.com>
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -149,6 +167,35 @@ AppendErrorCorrection(void)
 			free(expectOutput);
 			free(paddedData);
 			free(actualOutput);
+		}
+	}
+
+	PASS();
+}
+
+
+TEST
+ErrorCorrectionBlockLengths(void)
+{
+	/* from quirc version_db.c */
+	static const int data_bytes[QR_VER_MAX + 1] = {
+		   0,   26,   44,   70,  100,  134,  172,  196,  242,  292,
+		 346,  404,  466,  532,  581,  655,  733,  815,  901,  991,
+		1085, 1156, 1258, 1364, 1474, 1588, 1706, 1828, 1921, 2051,
+		2185, 2323, 2465, 2611, 2761, 2876, 3034, 3196, 3362, 3532,
+		3706,
+	};
+
+	for (int ver = 1; ver <= 40; ver++) {
+		for (int ecl = 0; ecl < 4; ecl++) {
+			const int rawCodewords = count_data_bits(ver) / 8;
+			const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecl][ver];
+			const int numShortBlocks = numBlocks - rawCodewords % numBlocks;
+			const int ecc_bs = rawCodewords / numBlocks;
+
+			const int lb_count = (data_bytes[ver] - ecc_bs * numShortBlocks) / (ecc_bs + 1);
+
+			ASSERT_EQ(lb_count, numBlocks - numShortBlocks);
 		}
 	}
 
@@ -1053,6 +1100,7 @@ main(int argc, char *argv[])
 
 	RUN_TEST(AppendBitsToBuffer);
 	RUN_TEST(AppendErrorCorrection);
+	RUN_TEST(ErrorCorrectionBlockLengths);
 	RUN_TEST(GetNumRawDataModules);
 	RUN_TEST(GetNumDataCodewords);
 	RUN_TEST(CalcReedSolomonGenerator);

@@ -619,8 +619,6 @@ static quirc_decode_error_t
 codestream_ecc(struct qr_data *data,
 	struct datastream *ds)
 {
-	const struct quirc_version_info *ver = &quirc_version_db[data->ver];
-
 	enum qr_ecl ecl;
 	switch (data->ecc_level) {
 	case 1: ecl = QR_ECL_LOW; break;
@@ -637,7 +635,7 @@ codestream_ecc(struct qr_data *data,
 	const int ecc_bs = rawCodewords / numBlocks;
 	const int shortBlockDataLen = ecc_bs - blockEccLen;
 
-	const int lb_count = (ver->data_bytes - ecc_bs * numShortBlocks) / (ecc_bs + 1);
+	const int lb_count = numBlocks - numShortBlocks;
 	const int bc = lb_count + numShortBlocks;
 	const int ecc_offset = shortBlockDataLen * bc + lb_count;
 	int dst_offset = 0;
