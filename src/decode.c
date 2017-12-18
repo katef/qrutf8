@@ -20,6 +20,8 @@
 
 #include <qr.h>
 
+#include "version_db.c"
+
 typedef enum {
 	QUIRC_SUCCESS = 0,
 	QUIRC_ERROR_INVALID_GRID_SIZE,
@@ -31,23 +33,6 @@ typedef enum {
 } quirc_decode_error_t;
 
 const char *quirc_strerror(quirc_decode_error_t err);
-
-/************************************************************************
- * QR-code version information database
- */
-
-struct quirc_rs_params {
-	int             bs; /* Small block size */
-	int             dw; /* Small data words */
-	int		ns; /* Number of small blocks */
-};
-
-struct quirc_version_info {
-	int				data_bytes;
-	struct quirc_rs_params          ecc[4];
-};
-
-#include "version_db.c"
 
 #define MAX_POLY       64
 
@@ -343,10 +328,9 @@ eloc_poly(uint8_t *omega,
 }
 
 static quirc_decode_error_t
-correct_block(uint8_t *data,
-	const struct quirc_rs_params *ecc, unsigned *corrections)
+correct_block(uint8_t *data, int ecc_bs, int ecc_dw, unsigned *corrections)
 {
-	int npar = ecc->bs - ecc->dw;
+	int npar = ecc_bs - ecc_dw;
 	uint8_t s[MAX_POLY];
 	uint8_t sigma[MAX_POLY];
 	uint8_t sigma_deriv[MAX_POLY];
@@ -356,7 +340,7 @@ correct_block(uint8_t *data,
 	*corrections = 0;
 
 	/* Compute syndrome vector */
-	if (!block_syndromes(data, ecc->bs, npar, s))
+	if (!block_syndromes(data, ecc_bs, npar, s))
 		return QUIRC_SUCCESS;
 
 	berlekamp_massey(s, npar, &gf256, sigma);
@@ -370,7 +354,7 @@ correct_block(uint8_t *data,
 	eloc_poly(omega, s, sigma, npar - 1);
 
 	/* Find error locations and magnitudes */
-	for (i = 0; i < ecc->bs; i++) {
+	for (i = 0; i < ecc_bs; i++) {
 		uint8_t xinv = gf256_exp[255 - i];
 
 		if (!poly_eval(sigma, xinv, &gf256)) {
@@ -380,11 +364,11 @@ correct_block(uint8_t *data,
 						   gf256_log[omega_x]) % 255];
 
 			(*corrections)++;
-			data[ecc->bs - i - 1] ^= error;
+			data[ecc_bs - i - 1] ^= error;
 		}
 	}
 
-	if (block_syndromes(data, ecc->bs, npar, s))
+	if (block_syndromes(data, ecc_bs, npar, s))
 		return QUIRC_ERROR_DATA_ECC;
 
 	return QUIRC_SUCCESS;
@@ -636,24 +620,46 @@ codestream_ecc(struct qr_data *data,
 	struct datastream *ds)
 {
 	const struct quirc_version_info *ver = &quirc_version_db[data->ver];
-	const struct quirc_rs_params *sb_ecc = &ver->ecc[data->ecc_level];
-	struct quirc_rs_params lb_ecc;
-	const int lb_count =
-	    (ver->data_bytes - sb_ecc->bs * sb_ecc->ns) / (sb_ecc->bs + 1);
-	const int bc = lb_count + sb_ecc->ns;
-	const int ecc_offset = sb_ecc->dw * bc + lb_count;
+
+	enum qr_ecl ecl;
+	switch (data->ecc_level) {
+	case 1: ecl = QR_ECL_LOW; break;
+	case 0: ecl = QR_ECL_MEDIUM; break;
+	case 3: ecl = QR_ECL_QUARTILE; break;
+	case 2: ecl = QR_ECL_HIGH; break;
+	default: assert(!"unreached"); abort();
+	}
+
+	const int blockEccLen = ECL_CODEWORDS_PER_BLOCK[ecl][data->ver];
+	const int rawCodewords = count_data_bits(data->ver) / 8;
+	const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecl][data->ver];
+	const int numShortBlocks = numBlocks - rawCodewords % numBlocks;
+	const int ecc_bs = rawCodewords / numBlocks;
+	const int shortBlockDataLen = ecc_bs - blockEccLen;
+
+	const int lb_count = (ver->data_bytes - ecc_bs * numShortBlocks) / (ecc_bs + 1);
+	const int bc = lb_count + numShortBlocks;
+	const int ecc_offset = shortBlockDataLen * bc + lb_count;
 	int dst_offset = 0;
 	int i;
 
-	memcpy(&lb_ecc, sb_ecc, sizeof(lb_ecc));
-	lb_ecc.dw++;
-	lb_ecc.bs++;
+	struct quirc_rs_params {
+		int bs; /* Small block size */
+		int dw; /* Small data words */
+	};
+
+	struct quirc_rs_params sb_ecc;
+	sb_ecc.bs = ecc_bs;
+	sb_ecc.dw = shortBlockDataLen;
+
+	struct quirc_rs_params lb_ecc;
+	lb_ecc.bs = ecc_bs + 1;
+	lb_ecc.dw = shortBlockDataLen + 1;
 
 	for (i = 0; i < bc; i++) {
 		uint8_t *dst = ds->data + dst_offset;
-		const struct quirc_rs_params *ecc =
-		    (i < sb_ecc->ns) ? sb_ecc : &lb_ecc;
-		const int num_ec = ecc->bs - ecc->dw;
+		const struct quirc_rs_params *ecc = (i < numShortBlocks) ? &sb_ecc : &lb_ecc;
+		const int num_ec = ecc_bs - ecc->dw;
 		quirc_decode_error_t err;
 		int j;
 
@@ -662,7 +668,7 @@ codestream_ecc(struct qr_data *data,
 		for (j = 0; j < num_ec; j++)
 			dst[ecc->dw + j] = ds->raw[ecc_offset + j * bc + i];
 
-		err = correct_block(dst, ecc, &data->codeword_corrections);
+		err = correct_block(dst, ecc->bs, ecc->dw, &data->codeword_corrections);
 		if (err)
 			return err;
 

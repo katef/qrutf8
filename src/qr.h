@@ -70,6 +70,14 @@ enum qr_mode {
 	QR_MODE_ECI     = 0x7
 };
 
+/* TODO: renumber per encoding */
+enum qr_ecl {
+	QR_ECL_LOW = 0,
+	QR_ECL_MEDIUM,
+	QR_ECL_QUARTILE,
+	QR_ECL_HIGH
+};
+
 /* XXX: define in terms of something else */
 #define QR_PAYLOAD_MAX 8896
 
