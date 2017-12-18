@@ -148,19 +148,19 @@ static uint8_t *append_eclReference(const uint8_t *data, int version, enum qr_ec
 TEST
 AppendErrorCorrection(void)
 {
-	for (int version = 1; version <= 40; version++) {
+	for (int ver = QR_VER_MIN; ver <= QR_VER_MAX; ver++) {
 		for (int ecl = 0; ecl < 4; ecl++) {
-			int dataLen = count_codewords(version, (enum qr_ecl)ecl);
+			int dataLen = count_codewords(ver, (enum qr_ecl)ecl);
 			uint8_t *pureData = xmalloc(dataLen);
 			for (int i = 0; i < dataLen; i++)
 				pureData[i] = rand() % 256;
-			uint8_t *expectOutput = append_eclReference(pureData, version, (enum qr_ecl)ecl);
+			uint8_t *expectOutput = append_eclReference(pureData, ver, (enum qr_ecl)ecl);
 			
-			int dataAndEccLen = count_data_bits(version) / 8;
+			int dataAndEccLen = count_data_bits(ver) / 8;
 			uint8_t *paddedData = xmalloc(dataAndEccLen);
 			memcpy(paddedData, pureData, dataLen * sizeof(uint8_t));
 			uint8_t *actualOutput = xmalloc(dataAndEccLen);
-			append_ecl(paddedData, version, (enum qr_ecl)ecl, actualOutput);
+			append_ecl(paddedData, ver, (enum qr_ecl)ecl, actualOutput);
 			
 			ASSERT_EQ(memcmp(actualOutput, expectOutput, dataAndEccLen * sizeof(uint8_t)), 0);
 			free(pureData);
@@ -186,7 +186,7 @@ ErrorCorrectionBlockLengths(void)
 		3706,
 	};
 
-	for (int ver = 1; ver <= 40; ver++) {
+	for (int ver = QR_VER_MIN; ver <= QR_VER_MAX; ver++) {
 		for (int ecl = 0; ecl < 4; ecl++) {
 			const int rawCodewords = count_data_bits(ver) / 8;
 			const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecl][ver];
@@ -404,7 +404,7 @@ FiniteFieldMultiply(void)
 TEST
 InitializeFunctionModulesEtc(void)
 {
-	for (int ver = 1; ver <= 40; ver++) {
+	for (int ver = QR_VER_MIN; ver <= QR_VER_MAX; ver++) {
 		uint8_t *map = xmalloc(QR_BUF_LEN(ver));
 	struct qr q = { 0, map };
 		ASSERT(map != NULL);
@@ -413,7 +413,7 @@ InitializeFunctionModulesEtc(void)
 		int size = q.size;
 		if (ver == 1)
 			ASSERT_EQ(size, 21);
-		else if (ver == 40)
+		else if (ver == QR_VER_MAX)
 			ASSERT_EQ(size, 177);
 		else
 			ASSERT_EQ(size, ver * 4 + 17);
@@ -1028,8 +1028,8 @@ TEST
 GetTotalBits(void)
 {
 	{
-		ASSERT_EQ(count_total_bits(NULL, 0, 1), 0);
-		ASSERT_EQ(count_total_bits(NULL, 0, 40), 0);
+		ASSERT_EQ(count_total_bits(NULL, 0, QR_VER_MIN), 0);
+		ASSERT_EQ(count_total_bits(NULL, 0, QR_VER_MAX), 0);
 	}
 	{
 		struct qr_segment segs[] = {
