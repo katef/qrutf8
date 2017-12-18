@@ -35,7 +35,7 @@ enum gate {
 
 struct fuzz_segment {
 	struct qr_segment seg;
-	char buf[(32767 + 7) / 8 + 1]; /* XXX: centralise maths */
+	char buf[BM_LEN(32767) + 1]; /* XXX: centralise maths */
 
 	/* source data */
 	char s[QR_PAYLOAD_MAX];
@@ -470,7 +470,7 @@ seg_print(FILE *f, const void *instance, void *env)
 			hexdump(stdout, (void *) o->a[j].s, o->a[j].len);
 		}
 		printf("      encoded data: count=%zu bits\n", o->a[j].seg.count);
-		hexdump(stdout, o->a[j].seg.data, (o->a[j].seg.count + 7) / 8);
+		hexdump(stdout, o->a[j].seg.data, BM_LEN(o->a[j].seg.count));
 	}
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));

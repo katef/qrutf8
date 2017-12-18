@@ -329,7 +329,7 @@ qr_calcSegmentBufferSize(enum qr_mode mode, size_t len)
 
 	assert(0 <= n && n <= INT16_MAX);
 
-	return ((size_t) n + 7) / 8;
+	return BM_LEN((size_t) n);
 }
 
 /*
@@ -524,7 +524,7 @@ qr_make_numeric(const char *s, void *buf)
 	assert(count != -1);
 
 	if (count > 0) {
-		memset(buf, 0, ((size_t) count + 7) / 8);
+		memset(buf, 0, BM_LEN(count));
 	}
 
 	rcount = 0;
@@ -579,7 +579,7 @@ qr_make_alnum(const char *s, void *buf)
 	assert(count != -1);
 
 	if (count > 0) {
-		memset(buf, 0, ((size_t) count + 7) / 8);
+		memset(buf, 0, BM_LEN(count));
 	}
 
 /* TODO: centralise with digits encoding; this is just base 45 */

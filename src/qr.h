@@ -32,6 +32,9 @@ struct qr {
 #define BM_SET(map, i) do { (map)[BM_BYTE(i)] |=   1U << BM_BIT(i);  } while (0)
 #define BM_CLR(map, i) do { (map)[BM_BYTE(i)] &= ~(1U << BM_BIT(i)); } while (0)
 
+/* Number of bytes needed to store a given number of bits */
+#define BM_LEN(bits) ((((size_t) bits) + 7) / 8)
+
 #define QR_SIZE(ver) ((size_t) (ver) * 4 + 17)
 #define QR_VER(size) (((unsigned) (size) - 17) / 4)
 
@@ -47,8 +50,7 @@ struct qr {
  *
  * Requires QR_VER_MIN <= n <= QR_VER_MAX.
  */
-#define QR_BUF_LEN(ver) \
-	((QR_SIZE(ver) * QR_SIZE(ver) + 7) / 8)
+#define QR_BUF_LEN(ver) BM_LEN(QR_SIZE(ver) * QR_SIZE(ver))
 
 /*
  * The worst-case number of bytes needed to store one QR Code, up to and including
