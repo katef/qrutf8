@@ -145,11 +145,5 @@ qr_get_module(const struct qr *q, unsigned x, unsigned y);
 void
 qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved);
 
-/* XXX: internal */
-unsigned
-getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX]);
-void
-draw_init(unsigned ver, struct qr *q);
-
 #endif
 

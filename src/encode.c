@@ -43,7 +43,7 @@
 
 #include <qr.h>
 
-#include "version_db.c"
+#include "internal.h"
 
 /*
  * The mask pattern used in a QR Code symbol.

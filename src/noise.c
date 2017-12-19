@@ -6,7 +6,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "qr.h"
+#include <qr.h>
+
+#include "internal.h"
 
 void
 qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)

@@ -20,7 +20,7 @@
 
 #include <qr.h>
 
-#include "version_db.c"
+#include "internal.h"
 
 typedef enum {
 	QUIRC_SUCCESS = 0,

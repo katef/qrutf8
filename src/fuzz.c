@@ -14,6 +14,7 @@
 #include <qr.h>
 #include <print.h>
 
+#include "internal.h"
 #include "xalloc.h"
 
 #include "encode.c"

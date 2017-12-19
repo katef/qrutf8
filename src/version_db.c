@@ -1,8 +1,4 @@
 
-/* XXX: placeholder */
-#ifndef VERSION_DB_C
-#define VERSION_DB_C
-
 /*
  * Adapted from:
  */
@@ -30,13 +26,21 @@
  *   Software.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+
+#include <qr.h>
+
+#include "internal.h"
+
 /*
  * Tables are indexed:
  * - Firstly by version (index 0 is for padding, set to an illegal value)
  * - Secondly by ecl (low, medium quartile, high).
  */
 
-static const int8_t ECL_CODEWORDS_PER_BLOCK[QR_VER_MAX + 1][4] = {
+const int8_t ECL_CODEWORDS_PER_BLOCK[QR_VER_MAX + 1][4] = {
 	{ -1, -1, -1, -1 },
 	{  7, 10, 13, 17 },
 	{ 10, 16, 22, 28 },
@@ -80,7 +84,7 @@ static const int8_t ECL_CODEWORDS_PER_BLOCK[QR_VER_MAX + 1][4] = {
 	{ 30, 28, 30, 30 }
 };
 
-static const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4] = {
+const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4] = {
 	{ -1, -1, -1, -1 },
 	{  1,  1,  1,  1 },
 	{  1,  1,  1,  1 },
@@ -123,6 +127,4 @@ static const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4] = {
 	{ 24, 47, 65, 77 },
 	{ 25, 49, 68, 81 }
 };
-
-#endif
 
