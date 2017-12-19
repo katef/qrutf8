@@ -107,8 +107,8 @@ AppendBitsToBuffer(void)
 // Ported from the Java version of the code.
 static uint8_t *append_eclReference(const uint8_t *data, int version, enum qr_ecl ecl) {
 	// Calculate parameter numbers
-	int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[(int)ecl][version];
-	int blockEccLen = ECL_CODEWORDS_PER_BLOCK[(int)ecl][version];
+	int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[version][(int) ecl];
+	int blockEccLen = ECL_CODEWORDS_PER_BLOCK[version][(int) ecl];
 	int rawCodewords = count_data_bits(version) / 8;
 	int numShortBlocks = numBlocks - rawCodewords % numBlocks;
 	int shortBlockLen = rawCodewords / numBlocks;
@@ -189,7 +189,7 @@ ErrorCorrectionBlockLengths(void)
 	for (int ver = QR_VER_MIN; ver <= QR_VER_MAX; ver++) {
 		for (int ecl = 0; ecl < 4; ecl++) {
 			const int rawCodewords = count_data_bits(ver) / 8;
-			const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecl][ver];
+			const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ver][ecl];
 			const int numShortBlocks = numBlocks - rawCodewords % numBlocks;
 			const int ecc_bs = rawCodewords / numBlocks;
 

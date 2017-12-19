@@ -126,7 +126,7 @@ count_codewords(unsigned ver, enum qr_ecl ecl)
 	assert(ecl < 4);
 
 	return count_data_bits(ver) / 8
-		- ECL_CODEWORDS_PER_BLOCK[ecl][ver] * NUM_ERROR_CORRECTION_BLOCKS[ecl][ver];
+		- ECL_CODEWORDS_PER_BLOCK[ver][ecl] * NUM_ERROR_CORRECTION_BLOCKS[ver][ecl];
 }
 
 /*
@@ -419,8 +419,8 @@ append_ecl(void *data, unsigned ver, enum qr_ecl ecl, uint8_t result[])
 	assert(QR_VER_MIN <= ver && ver <= QR_VER_MAX);
 
 	// Calculate parameter numbers
-	int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecl][ver];
-	int blockEccLen = ECL_CODEWORDS_PER_BLOCK[ecl][ver];
+	int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ver][ecl];
+	int blockEccLen = ECL_CODEWORDS_PER_BLOCK[ver][ecl];
 	int rawCodewords = count_data_bits(ver) / 8;
 	int dataLen = rawCodewords - blockEccLen * numBlocks;
 	int numShortBlocks = numBlocks - rawCodewords % numBlocks;
