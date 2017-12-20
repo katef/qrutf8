@@ -285,9 +285,7 @@ double vp8_ssim
 double vp8_calc_ssim
 (
     YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest,
-    int lumamask,
-    double *weight
+    YV12_BUFFER_CONFIG *dest
 )
 {
     double a, b, c;
@@ -301,7 +299,7 @@ double vp8_calc_ssim
     stride_uv = dest->uv_stride;
     stride = dest->y_stride;
 
-    lumimask = lumamask;
+    lumimask = 1;
 
     luminance = 1;
     a = vp8_ssim(source->y_buffer, dest->y_buffer,
@@ -322,8 +320,6 @@ double vp8_calc_ssim
     }
 
     ssimv = a * .8 + .1 * (b + c);
-
-    *weight = frame_weight;
 
     return ssimv;
 }

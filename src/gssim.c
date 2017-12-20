@@ -227,33 +227,29 @@ double calc_ssimg(const uint8 *org, const uint8 *rec,
 double vp8_calc_ssimg
 (
     YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest,
-    double *ssim_y,
-    double *ssim_u,
-    double *ssim_v
+    YV12_BUFFER_CONFIG *dest
 )
 {
-    double ssim_all = 0;
+    double ssim_y;
+    double ssim_u;
+    double ssim_v;
+
     int ysize  = source->y_width * source->y_height;
     int uvsize = ysize;
 
-    *ssim_y = calc_ssimg(source->y_buffer, dest->y_buffer,
-                         source->y_width, source->y_height,
-                         source->y_stride, dest->y_stride);
+    ssim_y = calc_ssimg(source->y_buffer, dest->y_buffer,
+                        source->y_width, source->y_height,
+                        source->y_stride, dest->y_stride);
 
 
-    *ssim_u = calc_ssimg(source->u_buffer, dest->u_buffer,
-                         source->uv_width, source->uv_height,
-                         source->uv_stride, dest->uv_stride);
+    ssim_u = calc_ssimg(source->u_buffer, dest->u_buffer,
+                        source->uv_width, source->uv_height,
+                        source->uv_stride, dest->uv_stride);
 
 
-    *ssim_v = calc_ssimg(source->v_buffer, dest->v_buffer,
-                         source->uv_width, source->uv_height,
-                         source->uv_stride, dest->uv_stride);
+    ssim_v = calc_ssimg(source->v_buffer, dest->v_buffer,
+                        source->uv_width, source->uv_height,
+                        source->uv_stride, dest->uv_stride);
 
-    ssim_all = (*ssim_y + *ssim_u + *ssim_v) / (ysize + uvsize + uvsize);
-    *ssim_y /= ysize;
-    *ssim_u /= uvsize;
-    *ssim_v /= uvsize;
-    return ssim_all;
+    return (ssim_y + ssim_u + ssim_v) / (ysize + uvsize + uvsize);
 }

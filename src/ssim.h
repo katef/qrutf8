@@ -52,16 +52,11 @@ typedef struct
 double vp8_calc_ssimg
 (
     YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest,
-    double *ssim_y,
-    double *ssim_u,
-    double *ssim_v
+    YV12_BUFFER_CONFIG *dest
 );
 double vp8_calc_ssim
 (
     YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest,
-    int lumamask,
-    double *weight
+    YV12_BUFFER_CONFIG *dest
 );
 
