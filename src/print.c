@@ -160,3 +160,42 @@ qr_print_xpm(FILE *f, const struct qr *q, bool invert)
 	fputs("};", f);
 }
 
+void
+qr_print_pbm1(FILE *f, const struct qr *q, bool invert)
+{
+	size_t border;
+	int x, y;
+
+	assert(f != NULL);
+	assert(q != NULL);
+
+	border = 4; /* per the spec */
+
+	fprintf(f, "P1\n");
+	fprintf(f, "%zu %zu\n", q->size + border * 2, q->size + border * 2);
+
+	for (y = -border; y < (int) (q->size + border); y++) {
+		for (x = -border; x < (int) (q->size + border); x++) {
+			bool v;
+
+			if (x < 0 || x >= (int) q->size || y < 0 || y >= (int) q->size) {
+				v = false;
+			} else {
+				v = qr_get_module(q, x, y);
+			}
+
+			if (invert) {
+				v = !v;
+			}
+
+			fprintf(f, "%d", v ? 0 : 1);
+
+			if (y < (int) (q->size + border)) {
+				fputs(" ", f);
+			}
+		}
+
+		fprintf(f, "\n");
+	}
+}
+
