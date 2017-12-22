@@ -199,3 +199,41 @@ qr_print_pbm1(FILE *f, const struct qr *q, bool invert)
 	}
 }
 
+void
+qr_print_svg(FILE *f, const struct qr *q, bool invert)
+{
+	size_t border;
+	int x, y;
+
+	assert(f != NULL);
+	assert(q != NULL);
+
+	border = 4; /* per the spec */
+
+	fprintf(f, "<?xml version='1.0' standalone='yes'?>\n");
+	fprintf(f, "<svg xmlns='%s' version='1.1' width='%zu' height='%zu'>\n",
+		"http://www.w3.org/2000/svg",
+		q->size + border * 2,
+		q->size + border * 2);
+
+	for (y = -border; y < (int) (q->size + border); y++) {
+		for (x = -border; x < (int) (q->size + border); x++) {
+			bool v;
+
+			if (x < 0 || x >= (int) q->size || y < 0 || y >= (int) q->size) {
+				v = false;
+			} else {
+				v = qr_get_module(q, x, y);
+			}
+
+			if (v) {
+				fprintf(f, "  <rect x='%zu' y='%zu' width='1' height='1' style='fill: %s; shape-rendering: crispEdges;'/>\n",
+					x + border, y + border,
+					invert ? "white" : "black");
+			}
+		}
+	}
+
+	fprintf(f, "</svg>");
+}
+
