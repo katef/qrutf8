@@ -161,6 +161,72 @@ qr_print_xpm(FILE *f, const struct qr *q, bool invert)
 }
 
 void
+qr_print_xbm(FILE *f, const struct qr *q, bool invert)
+{
+	size_t border;
+	int x, y;
+	uint8_t c;
+
+	assert(f != NULL);
+	assert(q != NULL);
+
+	border = 4; /* per the spec */
+
+	fprintf(f, "#define qr_width %zu\n", q->size + border * 2);
+	fprintf(f, "#define qr_height %zu\n", q->size + border * 2);
+	fprintf(f, "static unsigned char qr_bits[] = {\n");
+
+	c = 0x00;
+
+	for (y = -border; y < (int) (q->size + border); y++) {
+		fprintf(f, "  ");
+
+		for (x = -border; x < (int) (q->size + border); x++) {
+			bool v;
+
+			if (x < 0 || x >= (int) q->size || y < 0 || y >= (int) q->size) {
+				v = false;
+			} else {
+				v = qr_get_module(q, x, y);
+			}
+
+			if (invert) {
+				v = !v;
+			}
+
+			c |= (v << 7);
+
+			if (x == (int) (q->size + border) - 1) {
+				/* end of row; pad to byte */
+				c >>= (7 - ((x + border) & 07));
+
+				fprintf(f, "0x%02X", c);
+				if ((y + 1) < (int) (q->size + border)) {
+					fputs(", ", f);
+				}
+
+				c = 0x00;
+				continue;
+			}
+
+			if (((x + border) & 07) == 07) {
+				fprintf(f, "0x%02X", c);
+				fputs(", ", f);
+
+				c = 0x00;
+				continue;
+			}
+
+			c >>= 1;
+		}
+
+		fprintf(f, "\n");
+	}
+
+	fprintf(f, "};");
+}
+
+void
 qr_print_pbm1(FILE *f, const struct qr *q, bool invert)
 {
 	size_t border;

@@ -9,6 +9,9 @@ void
 qr_print_xpm(FILE *f, const struct qr *q, bool invert);
 
 void
+qr_print_xbm(FILE *f, const struct qr *q, bool invert);
+
+void
 qr_print_pbm1(FILE *f, const struct qr *q, bool invert);
 
 void
