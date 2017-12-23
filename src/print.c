@@ -266,6 +266,61 @@ qr_print_pbm1(FILE *f, const struct qr *q, bool invert)
 }
 
 void
+qr_print_pbm4(FILE *f, const struct qr *q, bool invert)
+{
+	size_t border;
+	int x, y;
+	uint8_t c;
+
+	assert(f != NULL);
+	assert(q != NULL);
+
+	border = 4; /* per the spec */
+
+	fprintf(f, "P4\n");
+	fprintf(f, "%zu %zu\n", q->size + border * 2, q->size + border * 2);
+
+	c = 0x00;
+
+	for (y = -border; y < (int) (q->size + border); y++) {
+		for (x = -border; x < (int) (q->size + border); x++) {
+			bool v;
+
+			if (x < 0 || x >= (int) q->size || y < 0 || y >= (int) q->size) {
+				v = false;
+			} else {
+				v = qr_get_module(q, x, y);
+			}
+
+			if (invert) {
+				v = !v;
+			}
+
+			c |= v;
+
+			if (x == (int) (q->size + border) - 1) {
+				/* end of row; pad to byte */
+				c <<= (7 - ((x + border) & 07));
+
+				fwrite(&c, sizeof c, 1, f);
+
+				c = 0x00;
+				continue;
+			}
+
+			if (((x + border) & 07) == 07) {
+				fwrite(&c, sizeof c, 1, f);
+
+				c = 0x00;
+				continue;
+			}
+
+			c <<= 1;
+		}
+	}
+}
+
+void
 qr_print_svg(FILE *f, const struct qr *q, bool invert)
 {
 	size_t border;

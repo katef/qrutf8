@@ -15,6 +15,9 @@ void
 qr_print_pbm1(FILE *f, const struct qr *q, bool invert);
 
 void
+qr_print_pbm4(FILE *f, const struct qr *q, bool invert);
+
+void
 qr_print_svg(FILE *f, const struct qr *q, bool invert);
 
 #endif
