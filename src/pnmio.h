@@ -33,8 +33,5 @@
 int  get_pnm_type(FILE *f);
 void read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii);
 void read_pbm_data(FILE *f, int *img_in, int is_ascii);
-void write_pbm_file(FILE *f, int *img_out, char *img_out_fname, 
-       int x_size, int y_size, int x_scale_val, int y_scale_val, int linevals, 
-       int is_ascii);
 
 #endif /* PNMIO_H */
