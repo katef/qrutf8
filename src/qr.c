@@ -66,6 +66,7 @@ main(int argc, char * const argv[])
 	enum qr_ecl ecl;
 	unsigned min, max;
 	bool boost_ecl;
+	bool decode;
 	bool invert;
 	bool wide;
 	unsigned noise;
@@ -76,6 +77,7 @@ main(int argc, char * const argv[])
 	mask = QR_MASK_AUTO;
 	ecl  = QR_ECL_LOW;
 	boost_ecl = true;
+	decode = false;
 	invert = true;
 	wide = false;
 	noise = 0;
@@ -84,8 +86,12 @@ main(int argc, char * const argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "rbl:m:n:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "drbl:m:n:e:v:w"), c != -1) {
 			switch (c) {
+			case 'd':
+				decode = true;
+				break;
+
 			case 'r':
 				invert = false;
 				break;
@@ -175,7 +181,7 @@ main(int argc, char * const argv[])
 	case IMG_SVG:    qr_print_svg(stdout, &q, invert);          break;
 	}
 
-	{
+	if (decode) {
 		struct qr_data data;
 		quirc_decode_error_t e;
 
