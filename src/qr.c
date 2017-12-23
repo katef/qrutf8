@@ -15,6 +15,50 @@
 #include "encode.c"
 #include "decode.c"
 
+enum img {
+	IMG_UTF8QB,
+	IMG_XPM,
+	IMG_XBM,
+	IMG_PBM1,
+	IMG_PBM4,
+	IMG_SVG
+};
+
+static enum img
+imgname(const char *s)
+{
+	size_t i;
+
+	static const struct {
+		enum img img;
+		const char *s;
+	} a[] = {
+		{ IMG_UTF8QB, "utf8qb" },
+		{ IMG_XPM,    "xpm"    },
+		{ IMG_XBM,    "xbm"    },
+		{ IMG_PBM1,   "pbm1"   },
+		{ IMG_PBM4,   "pbm4"   },
+		{ IMG_SVG,    "svg"    }
+	};
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].s, s)) {
+			return a[i].img;
+		}
+	}
+
+	fprintf(stderr, "unrecognised image format '%s'; valid formats are: ", s);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s", a[i].s);
+		if (i < sizeof a / sizeof *a) {
+			fprintf(stderr, ", ");
+		}
+	}
+
+	exit(EXIT_FAILURE);
+}
+
 int
 main(int argc, char * const argv[])
 {
@@ -25,6 +69,7 @@ main(int argc, char * const argv[])
 	bool invert;
 	bool wide;
 	unsigned noise;
+	enum img img;
 
 	min  = QR_VER_MIN;
 	max  = QR_VER_MAX;
@@ -34,11 +79,12 @@ main(int argc, char * const argv[])
 	invert = true;
 	wide = false;
 	noise = 0;
+	img = IMG_UTF8QB;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "rbm:n:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "rbl:m:n:e:v:w"), c != -1) {
 			switch (c) {
 			case 'r':
 				invert = false;
@@ -54,6 +100,10 @@ main(int argc, char * const argv[])
 
 			case 'n':
 				noise = atoi(optarg); /* XXX */
+				break;
+
+			case 'l':
+				img = imgname(optarg);
 				break;
 
 			case 'm':
@@ -116,15 +166,14 @@ main(int argc, char * const argv[])
 
 	qr_noise(&q, noise, 0, false);
 
-	qr_print_utf8qb(stdout, &q, wide, invert);
-/*
-	qr_print_xpm(stdout, &q, invert);
-*/
-	(void) qr_print_utf8qb;
-	(void) qr_print_xpm;
-	(void) wide;
-	(void) invert;
-
+	switch (img) {
+	case IMG_UTF8QB: qr_print_utf8qb(stdout, &q, wide, invert); break;
+	case IMG_XPM:    qr_print_xpm(stdout, &q, invert);          break;
+	case IMG_XBM:    qr_print_xbm(stdout, &q, invert);          break;
+	case IMG_PBM1:   qr_print_pbm1(stdout, &q, invert);         break;
+	case IMG_PBM4:   qr_print_pbm4(stdout, &q, invert);         break;
+	case IMG_SVG:    qr_print_svg(stdout, &q, invert);          break;
+	}
 
 	{
 		struct qr_data data;
