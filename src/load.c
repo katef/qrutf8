@@ -24,62 +24,49 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <string.h>
-#include <math.h>
-#include "pnmio.h"
 
-#define  MAXLINE         1024
-#define  LITTLE_ENDIAN     -1
-#define  BIG_ENDIAN         1
-#define  GREYSCALE_TYPE     0 /* used for PFM */
-#define  RGB_TYPE           1 /* used for PFM */
+#include <qr.h>
+#include <io.h>
+
+#define MAXLINE 1024
+
+enum {
+	PBM_ASCII  = 1,
+	PBM_BINARY = 4
+};
 
 /*
- * Read the header contents of a PBM/PGM/PPM/PFM file up to the point of
- * extracting its type. Valid types for a PNM image are as follows:
- *   PBM_ASCII     =  1
- *   PBM_BINARY    =  4
- *
- * The result (pnm_type) is returned.
+ * Read the data contents of a PBM (portable bit map) file.
  */
-int
-get_pnm_type(FILE *f)
+static void
+read_pbm_data(FILE *f, int *img_in, int is_ascii)
 {
-	int flag=0;
-	int pnm_type=0;
-	unsigned int i;
-	char magic[MAXLINE];
-	char line[MAXLINE];
+	int i=0, c;
+	int lum_val;
+	int k;
 
-	/* Read the PNM/PFM file header. */
-	while (fgets(line, MAXLINE, f) != NULL) {
-		flag = 0;
-		for (i = 0; i < strlen(line); i++) {
-			if (isgraph(line[i])) {
-				if ((line[i] == '#') && (flag == 0)) {
-					flag = 1;
-				}
+	/* Read the rest of the PBM file. */
+	while ((c = fgetc(f)) != EOF) {
+		ungetc(c, f);
+
+		if (is_ascii == 1) {
+			if (fscanf(f, "%d", &lum_val) != 1) return;
+			img_in[i++] = lum_val;
+		} else {
+			lum_val = fgetc(f);
+			/* Decode the image contents byte-by-byte. */
+			for (k = 0; k < 8; k++) {
+				img_in[i++] = (lum_val >> (7-k)) & 0x1;
 			}
 		}
-
-		if (flag == 0) {
-			sscanf(line, "%s", magic);
-			break;
-		}
 	}
 
-	if (strcmp(magic, "P1") == 0) {
-		pnm_type = PBM_ASCII;
-	} else if (strcmp(magic, "P4") == 0) {
-		pnm_type = PBM_BINARY;
-	} else {
-		fprintf(stderr, "Error: Unknown PNM/PFM file; wrong magic number!\n");
-		exit(1);
-	}
-
-	return (pnm_type);
+	fclose(f);
 }
 
 /*
@@ -93,7 +80,7 @@ get_pnm_type(FILE *f)
  * NOTE1: Comment lines start with '#'.
  * NOTE2: < > denote integer values (in decimal).
  */
-void
+static void
 read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii)
 {
 	int flag=0;
@@ -143,31 +130,87 @@ read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii)
 }
 
 /*
- * Read the data contents of a PBM (portable bit map) file.
+ * Read the header contents of a PBM/PGM/PPM/PFM file up to the point of
+ * extracting its type. Valid types for a PNM image are as follows:
+ *   PBM_ASCII     =  1
+ *   PBM_BINARY    =  4
+ *
+ * The result (pnm_type) is returned.
  */
-void
-read_pbm_data(FILE *f, int *img_in, int is_ascii)
+static int
+get_pnm_type(FILE *f)
 {
-	int i=0, c;
-	int lum_val;
-	int k;
+	int flag=0;
+	int pnm_type=0;
+	unsigned int i;
+	char magic[MAXLINE];
+	char line[MAXLINE];
 
-	/* Read the rest of the PBM file. */
-	while ((c = fgetc(f)) != EOF) {
-		ungetc(c, f);
-
-		if (is_ascii == 1) {
-			if (fscanf(f, "%d", &lum_val) != 1) return;
-			img_in[i++] = lum_val;
-		} else {
-			lum_val = fgetc(f);
-			/* Decode the image contents byte-by-byte. */
-			for (k = 0; k < 8; k++) {
-				img_in[i++] = (lum_val >> (7-k)) & 0x1;
+	/* Read the PNM/PFM file header. */
+	while (fgets(line, MAXLINE, f) != NULL) {
+		flag = 0;
+		for (i = 0; i < strlen(line); i++) {
+			if (isgraph(line[i])) {
+				if ((line[i] == '#') && (flag == 0)) {
+					flag = 1;
+				}
 			}
+		}
+
+		if (flag == 0) {
+			sscanf(line, "%s", magic);
+			break;
 		}
 	}
 
-	fclose(f);
+	if (strcmp(magic, "P1") == 0) {
+		pnm_type = PBM_ASCII;
+	} else if (strcmp(magic, "P4") == 0) {
+		pnm_type = PBM_BINARY;
+	} else {
+		fprintf(stderr, "Error: Unknown PNM/PFM file; wrong magic number!\n");
+		exit(1);
+	}
+
+	return (pnm_type);
+}
+
+bool
+qr_load_pbm(FILE *f, struct qr *q, bool invert)
+{
+	int enable_ascii=0;
+	int pnm_type;
+	int x_dim, y_dim;
+	int *img_data;
+
+	img_data = NULL;
+
+	pnm_type = get_pnm_type(f);
+	fprintf(stderr, "Info: pnm_type = %d\n", pnm_type);
+	rewind(f);
+
+	if (pnm_type != PBM_ASCII && pnm_type != PBM_BINARY) {
+		return false;
+	}
+
+	read_pbm_header(f, &x_dim, &y_dim, &enable_ascii);
+
+	img_data = malloc((x_dim * y_dim) * sizeof(int));
+	if (img_data == NULL) {
+		return false;
+	}
+
+	read_pbm_data(f, img_data, enable_ascii);
+
+	/* TODO: validate border */
+	(void) q;
+	(void) invert;
+
+	/* TODO: set size */
+	/* TODO: set modules, skip border */
+
+	free(img_data);
+
+	return true;
 }
 

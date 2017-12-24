@@ -1,6 +1,6 @@
 
-#ifndef QR_PRINT_H
-#define QR_PRINT_H
+#ifndef QR_IO_H
+#define QR_IO_H
 
 void
 qr_print_utf8qb(FILE *f, const struct qr *q, bool wide, bool invert);
@@ -19,6 +19,9 @@ qr_print_pbm4(FILE *f, const struct qr *q, bool invert);
 
 void
 qr_print_svg(FILE *f, const struct qr *q, bool invert);
+
+bool
+qr_load_pbm(FILE *f, struct qr *q, bool invert);
 
 #endif
 

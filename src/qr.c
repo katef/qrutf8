@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #include <qr.h>
-#include <print.h>
+#include <io.h>
 
 #include "encode.c"
 #include "decode.c"
@@ -71,6 +71,7 @@ main(int argc, char * const argv[])
 	bool wide;
 	unsigned noise;
 	enum img img;
+	const char *filename = NULL;
 
 	min  = QR_VER_MIN;
 	max  = QR_VER_MAX;
@@ -86,7 +87,7 @@ main(int argc, char * const argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "drbl:m:n:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "drbf:l:m:n:e:v:w"), c != -1) {
 			switch (c) {
 			case 'd':
 				decode = true;
@@ -98,6 +99,10 @@ main(int argc, char * const argv[])
 
 			case 'b':
 				boost_ecl = false;
+				break;
+
+			case 'f':
+				filename = optarg;
 				break;
 
 			case 'w':
@@ -153,8 +158,14 @@ main(int argc, char * const argv[])
 		argc -= optind;
 		argv += optind;
 
-		if (argc != 1) {
+		if (filename != NULL) {
+			if (argc != 0) {
 			exit(EXIT_FAILURE);
+			}
+		} else {
+			if (argc != 1) {
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -164,10 +175,26 @@ main(int argc, char * const argv[])
 	struct qr q;
 	uint8_t map[QR_BUF_LEN_MAX];
 	q.map = map;
-	uint8_t tmp[QR_BUF_LEN_MAX];
-	if (!qr_encode_str(argv[0], tmp, &q, ecl, min, max, mask, boost_ecl)) {
-		fprintf(stderr, "hmm\n"); /* XXX */
-		exit(EXIT_FAILURE);
+
+	if (filename == NULL) {
+		uint8_t tmp[QR_BUF_LEN_MAX];
+		if (!qr_encode_str(argv[0], tmp, &q, ecl, min, max, mask, boost_ecl)) {
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		FILE *f;
+
+		/* Open input file. */
+		f = fopen(filename, "rb");
+		if (f == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		if (!qr_load_pbm(f, &q, invert)) {
+			exit(EXIT_FAILURE);
+		}
+
+		fclose(f);
 	}
 
 	qr_noise(&q, noise, 0, false);

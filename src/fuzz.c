@@ -12,7 +12,7 @@
 #include <time.h>
 
 #include <qr.h>
-#include <print.h>
+#include <io.h>
 
 #include "internal.h"
 #include "xalloc.h"
