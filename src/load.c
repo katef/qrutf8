@@ -40,24 +40,25 @@
  * Read the data contents of a PBM (portable bit map) file.
  */
 static void
-read_pbm_data(FILE *f, int *img_in, int is_ascii)
+read_pbm_data(FILE *f, bool *img, bool ascii)
 {
-	int i=0, c;
-	int lum_val;
+	int i, c;
+	int v;
 	int k;
 
+	i = 0;
+
 	/* Read the rest of the PBM file. */
-	while ((c = fgetc(f)) != EOF) {
+	while (c = fgetc(f), c != EOF) {
 		ungetc(c, f);
 
-		if (is_ascii == 1) {
-			if (fscanf(f, "%d", &lum_val) != 1) return;
-			img_in[i++] = lum_val;
+		if (ascii) {
+			if (fscanf(f, "%d", &v) != 1) return;
+			img[i++] = v;
 		} else {
-			lum_val = fgetc(f);
-			/* Decode the image contents byte-by-byte. */
+			v = fgetc(f);
 			for (k = 0; k < 8; k++) {
-				img_in[i++] = (lum_val >> (7-k)) & 0x1;
+				img[i++] = (v >> (7 - k)) & 0x1;
 			}
 		}
 	}
@@ -77,74 +78,75 @@ read_pbm_data(FILE *f, int *img_in, int is_ascii)
  * NOTE2: < > denote integer values (in decimal).
  */
 static void
-read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii)
+read_pbm_header(FILE *f, size_t *width, size_t *height, bool *ascii)
 {
-	int flag=0;
-	int x_val, y_val;
+	bool flag;
+	size_t x, y;
 	unsigned int i;
 	char magic[MAXLINE];
 	char line[MAXLINE];
-	int count=0;
+	int n = 0;
 
 	/* Read the PBM file header. */
 	while (fgets(line, MAXLINE, f) != NULL) {
-		flag = 0;
+		flag = false;
+
 		for (i = 0; i < strlen(line); i++) {
 			if (isgraph(line[i])) {
-				if ((line[i] == '#') && (flag == 0)) {
-					flag = 1;
+				if ((line[i] == '#') && !flag) {
+					flag = true;
 				}
 			}
 		}
-		if (flag == 0) {
-			if (count == 0) {
-				count += sscanf(line, "%s %d %d", magic, &x_val, &y_val);
-			} else if (count == 1) {
-				count += sscanf(line, "%d %d", &x_val, &y_val);
-			} else if (count == 2) {
-				count += sscanf(line, "%d", &y_val);
+
+		if (!flag) {
+			if (n == 0) {
+				n += sscanf(line, "%s %zu %zu", magic, &x, &y);
+			} else if (n == 1) {
+				n += sscanf(line, "%zu %zu", &x, &y);
+			} else if (n == 2) {
+				n += sscanf(line, "%zu", &y);
 			}
 		}
-		if (count == 3) {
+
+		if (n == 3) {
 			break;
 		}
 	}
 
 	if (strcmp(magic, "P1") == 0) {
-		*is_ascii = 1;
+		*ascii = true;
 	} else if (strcmp(magic, "P4") == 0) {
-		*is_ascii = 0;
+		*ascii = false;
 	} else {
 		fprintf(stderr, "Error: Input file not in PBM format!\n");
 		exit(1);
 	}
 
-	fprintf(stderr, "Info: magic=%s, x_val=%d, y_val=%d\n", magic, x_val, y_val);
-
-	*img_xdim   = x_val;
-	*img_ydim   = y_val;
+	*width  = x;
+	*height = y;
 }
 
 static bool
-quiet(int x_dim, int y_dim, size_t border, const int *img_data)
+quiet(size_t width, size_t height, size_t border, const bool *img)
 {
 	size_t x, y;
 
-	assert(x_dim == y_dim);
-	assert(border <= (size_t) x_dim);
-	assert(img_data != NULL);
+	assert(width == height);
+	assert(border <= width);
+	assert(img != NULL);
 
-	for (y = 0; y < (size_t) y_dim; y++) {
+	for (y = 0; y < height; y++) {
 		for (x = 0; x < border; x++) {
-			if (img_data[y * y_dim + x] || img_data[y * y_dim + (x_dim - 1 - x)]) {
+			if (img[y * height + x] || img[y * height + (width - 1 - x)]) {
 				return false;
 			}
 		}
 	}
 
 	for (y = 0; y < border; y++) {
-		for (x = 0; x < (size_t) x_dim; x++) {
-			if (img_data[y * y_dim + x] || img_data[(y_dim - 1 - y) * y_dim + x]) {
+		for (x = 0; x < width; x++) {
+			if (img[y * height + x] || img[(height - 1 - y) * height + x]) {
 				return false;
 			}
 		}
@@ -156,31 +158,31 @@ quiet(int x_dim, int y_dim, size_t border, const int *img_data)
 bool
 qr_load_pbm(FILE *f, struct qr *q, bool invert)
 {
-	int enable_ascii=0;
-	int x_dim, y_dim;
-	int *img_data;
+	bool ascii;
+	size_t width, height;
+	bool *img;
 	size_t border;
 
-	read_pbm_header(f, &x_dim, &y_dim, &enable_ascii);
+	read_pbm_header(f, &width, &height, &ascii);
 
-	if (x_dim != y_dim) {
+	if (width != height) {
 		return false;
 	}
 
-	img_data = malloc((x_dim * y_dim) * sizeof(int));
-	if (img_data == NULL) {
+	img = malloc((width * height) * sizeof(int));
+	if (img == NULL) {
 		return false;
 	}
 
-	read_pbm_data(f, img_data, enable_ascii);
+	read_pbm_data(f, img, ascii);
 
 	{
 		size_t i;
 
 		border = 0;
 
-		for (i = 0; i < (size_t) x_dim; i++) {
-			if (img_data[i * y_dim + i]) {
+		for (i = 0; i < width; i++) {
+			if (img[i * height + i]) {
 				break;
 			}
 
@@ -191,34 +193,34 @@ qr_load_pbm(FILE *f, struct qr *q, bool invert)
 	/* XXX: heed invert */
 	(void) invert;
 
-	if (!quiet(x_dim, y_dim, border, img_data)) {
+	if (!quiet(width, height, border, img)) {
 		fprintf(stderr, "pixel in quiet zone\n"); /* XXX: error enum */
 		goto error;
 	}
 
-	q->size = x_dim - border * 2;
+	q->size = width - border * 2;
 
 	{
 		size_t x, y;
 
-		for (y = border; y < (size_t) y_dim - border; y++) {
-			for (x = border; x < (size_t) x_dim - border; x++) {
+		for (y = border; y < height - border; y++) {
+			for (x = border; x < width - border; x++) {
 				bool v;
 
-				v = img_data[y * y_dim + x];
+				v = img[y * height + x];
 
 				qr_set_module(q, x - border, y - border, v);
 			}
 		}
 	}
 
-	free(img_data);
+	free(img);
 
 	return true;
 
 error:
 
-	free(img_data);
+	free(img);
 
 	return false;
 }
