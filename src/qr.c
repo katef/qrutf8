@@ -17,8 +17,6 @@
 
 enum img {
 	IMG_UTF8QB,
-	IMG_XPM,
-	IMG_XBM,
 	IMG_PBM1,
 	IMG_PBM4,
 	IMG_SVG
@@ -34,8 +32,6 @@ imgname(const char *s)
 		const char *s;
 	} a[] = {
 		{ IMG_UTF8QB, "utf8qb" },
-		{ IMG_XPM,    "xpm"    },
-		{ IMG_XBM,    "xbm"    },
 		{ IMG_PBM1,   "pbm1"   },
 		{ IMG_PBM4,   "pbm4"   },
 		{ IMG_SVG,    "svg"    }
@@ -201,8 +197,6 @@ main(int argc, char * const argv[])
 
 	switch (img) {
 	case IMG_UTF8QB: qr_print_utf8qb(stdout, &q, wide, invert); break;
-	case IMG_XPM:    qr_print_xpm(stdout, &q, invert);          break;
-	case IMG_XBM:    qr_print_xbm(stdout, &q, invert);          break;
 	case IMG_PBM1:   qr_print_pbm1(stdout, &q, invert);         break;
 	case IMG_PBM4:   qr_print_pbm4(stdout, &q, invert);         break;
 	case IMG_SVG:    qr_print_svg(stdout, &q, invert);          break;
