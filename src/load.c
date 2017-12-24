@@ -23,6 +23,7 @@
  * libpnmio. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -124,14 +125,47 @@ read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii)
 	*img_ydim   = y_val;
 }
 
+static bool
+quiet(int x_dim, int y_dim, size_t border, const int *img_data)
+{
+	size_t x, y;
+
+	assert(x_dim == y_dim);
+	assert(border <= (size_t) x_dim);
+	assert(img_data != NULL);
+
+	for (y = 0; y < (size_t) y_dim; y++) {
+		for (x = 0; x < border; x++) {
+			if (img_data[y * y_dim + x] || img_data[y * y_dim + (x_dim - 1 - x)]) {
+				return false;
+			}
+		}
+	}
+
+	for (y = 0; y < border; y++) {
+		for (x = 0; x < (size_t) x_dim; x++) {
+			if (img_data[y * y_dim + x] || img_data[(y_dim - 1 - y) * y_dim + x]) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 bool
 qr_load_pbm(FILE *f, struct qr *q, bool invert)
 {
 	int enable_ascii=0;
 	int x_dim, y_dim;
 	int *img_data;
+	size_t border;
 
 	read_pbm_header(f, &x_dim, &y_dim, &enable_ascii);
+
+	if (x_dim != y_dim) {
+		return false;
+	}
 
 	img_data = malloc((x_dim * y_dim) * sizeof(int));
 	if (img_data == NULL) {
@@ -140,15 +174,52 @@ qr_load_pbm(FILE *f, struct qr *q, bool invert)
 
 	read_pbm_data(f, img_data, enable_ascii);
 
-	/* TODO: validate border */
-	(void) q;
+	{
+		size_t i;
+
+		border = 0;
+
+		for (i = 0; i < (size_t) x_dim; i++) {
+			if (img_data[i * y_dim + i]) {
+				break;
+			}
+
+			border++;
+		}
+	}
+
+	/* XXX: heed invert */
 	(void) invert;
 
-	/* TODO: set size */
-	/* TODO: set modules, skip border */
+	if (!quiet(x_dim, y_dim, border, img_data)) {
+		fprintf(stderr, "pixel in quiet zone\n"); /* XXX: error enum */
+		goto error;
+	}
+
+	q->size = x_dim - border * 2;
+
+	{
+		size_t x, y;
+
+		for (y = border; y < (size_t) y_dim - border; y++) {
+			for (x = border; x < (size_t) x_dim - border; x++) {
+				bool v;
+
+				v = img_data[y * y_dim + x];
+
+				qr_set_module(q, x - border, y - border, v);
+			}
+		}
+	}
 
 	free(img_data);
 
 	return true;
+
+error:
+
+	free(img_data);
+
+	return false;
 }
 
