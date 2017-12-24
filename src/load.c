@@ -35,11 +35,6 @@
 
 #define MAXLINE 1024
 
-enum {
-	PBM_ASCII  = 1,
-	PBM_BINARY = 4
-};
-
 /*
  * Read the data contents of a PBM (portable bit map) file.
  */
@@ -129,69 +124,12 @@ read_pbm_header(FILE *f, int *img_xdim, int *img_ydim, int *is_ascii)
 	*img_ydim   = y_val;
 }
 
-/*
- * Read the header contents of a PBM/PGM/PPM/PFM file up to the point of
- * extracting its type. Valid types for a PNM image are as follows:
- *   PBM_ASCII     =  1
- *   PBM_BINARY    =  4
- *
- * The result (pnm_type) is returned.
- */
-static int
-get_pnm_type(FILE *f)
-{
-	int flag=0;
-	int pnm_type=0;
-	unsigned int i;
-	char magic[MAXLINE];
-	char line[MAXLINE];
-
-	/* Read the PNM/PFM file header. */
-	while (fgets(line, MAXLINE, f) != NULL) {
-		flag = 0;
-		for (i = 0; i < strlen(line); i++) {
-			if (isgraph(line[i])) {
-				if ((line[i] == '#') && (flag == 0)) {
-					flag = 1;
-				}
-			}
-		}
-
-		if (flag == 0) {
-			sscanf(line, "%s", magic);
-			break;
-		}
-	}
-
-	if (strcmp(magic, "P1") == 0) {
-		pnm_type = PBM_ASCII;
-	} else if (strcmp(magic, "P4") == 0) {
-		pnm_type = PBM_BINARY;
-	} else {
-		fprintf(stderr, "Error: Unknown PNM/PFM file; wrong magic number!\n");
-		exit(1);
-	}
-
-	return (pnm_type);
-}
-
 bool
 qr_load_pbm(FILE *f, struct qr *q, bool invert)
 {
 	int enable_ascii=0;
-	int pnm_type;
 	int x_dim, y_dim;
 	int *img_data;
-
-	img_data = NULL;
-
-	pnm_type = get_pnm_type(f);
-	fprintf(stderr, "Info: pnm_type = %d\n", pnm_type);
-	rewind(f);
-
-	if (pnm_type != PBM_ASCII && pnm_type != PBM_BINARY) {
-		return false;
-	}
 
 	read_pbm_header(f, &x_dim, &y_dim, &enable_ascii);
 
