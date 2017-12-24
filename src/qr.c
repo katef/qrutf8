@@ -14,6 +14,8 @@
 
 #include "encode.c"
 #include "decode.c"
+#include "ssim.h"
+#include "xalloc.h"
 
 enum img {
 	IMG_UTF8QB,
@@ -55,6 +57,29 @@ imgname(const char *s)
 	exit(EXIT_FAILURE);
 }
 
+static void
+yv12(const struct qr *q, YV12_BUFFER_CONFIG *img)
+{
+	size_t x, y;
+
+	img->y_width   = q->size;
+	img->y_height  = q->size;
+	img->y_stride  = q->size;
+	img->uv_width  = q->size;
+	img->uv_height = q->size;
+	img->uv_stride = q->size;
+
+	img->y_buffer  = xmalloc(q->size * q->size);
+	img->u_buffer  = img->y_buffer;
+	img->v_buffer  = img->y_buffer;
+
+	for (y = 0; y < q->size; y++) {
+		for (x = 0; x < q->size; x++) {
+			img->y_buffer[y * q->size + x] = qr_get_module(q, x, y) ? 255 : 0;
+		}
+	}
+}
+
 int
 main(int argc, char * const argv[])
 {
@@ -68,6 +93,7 @@ main(int argc, char * const argv[])
 	unsigned noise;
 	enum img img;
 	const char *filename = NULL;
+	const char *target   = NULL;
 
 	min  = QR_VER_MIN;
 	max  = QR_VER_MAX;
@@ -83,7 +109,7 @@ main(int argc, char * const argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "drbf:l:m:n:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:w"), c != -1) {
 			switch (c) {
 			case 'd':
 				decode = true;
@@ -99,6 +125,10 @@ main(int argc, char * const argv[])
 
 			case 'f':
 				filename = optarg;
+				break;
+
+			case 't':
+				target = optarg;
 				break;
 
 			case 'w':
@@ -229,6 +259,41 @@ main(int argc, char * const argv[])
 		}
 
 		printf("\n");
+	}
+
+	if (target != NULL) {
+		FILE *f;
+		struct qr t;
+		double p;
+
+		uint8_t tmap[QR_BUF_LEN_MAX];
+		t.map = tmap;
+
+		/* Open input file. */
+		f = fopen(target, "rb");
+		if (f == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		if (!qr_load_pbm(f, &t, invert)) {
+			exit(EXIT_FAILURE);
+		}
+
+		fclose(f);
+
+		YV12_BUFFER_CONFIG a, b;
+
+		yv12(&q, &a);
+		yv12(&t, &b);
+
+		p = vp8_calc_ssimg(&a, &b);
+		printf("ssimg: %f\n", 1 / (1 - p));
+
+		p = vp8_calc_ssim(&a, &b);
+		printf("ssim: %f\n", 1 / (1 - p));
+
+		free(a.y_buffer);
+		free(b.y_buffer);
 	}
 
 	return 0;
