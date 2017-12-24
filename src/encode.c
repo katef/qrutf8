@@ -678,9 +678,8 @@ qr_get_module(const struct qr *q, unsigned x, unsigned y)
 	return BM_GET(q->map, y * q->size + x);
 }
 
-// Sets the module at the given coordinates, which must be in bounds.
-static void
-set_module(struct qr *q, unsigned x, unsigned y, bool v)
+void
+qr_set_module(struct qr *q, unsigned x, unsigned y, bool v)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
@@ -701,7 +700,7 @@ set_module_bounded(struct qr *q, unsigned x, unsigned y, bool v)
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
 
 	if (x < q->size && y < q->size) {
-		set_module(q, x, y, v);
+		qr_set_module(q, x, y, v);
 	}
 }
 
@@ -713,7 +712,7 @@ fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr *q)
 
 	for (unsigned y = 0; y < height; y++) {
 		for (unsigned x = 0; x < width; x++) {
-			set_module(q, left + x, top + y, true);
+			qr_set_module(q, left + x, top + y, true);
 		}
 	}
 }
@@ -805,8 +804,8 @@ draw_white_function_modules(struct qr *q, unsigned ver)
 
 	// Draw horizontal and vertical timing patterns
 	for (size_t i = 7; i < q->size - 7; i += 2) {
-		set_module(q, 6, i, false);
-		set_module(q, i, 6, false);
+		qr_set_module(q, 6, i, false);
+		qr_set_module(q, i, 6, false);
 	}
 
 	// Draw 3 finder patterns (all corners except bottom right; overwrites some timing modules)
@@ -833,7 +832,7 @@ draw_white_function_modules(struct qr *q, unsigned ver)
 			else {
 				for (int k = -1; k <= 1; k++) {
 					for (int l = -1; l <= 1; l++)
-						set_module(q, alignPatPos[i] + l, alignPatPos[j] + k, k == 0 && l == 0);
+						qr_set_module(q, alignPatPos[i] + l, alignPatPos[j] + k, k == 0 && l == 0);
 				}
 			}
 		}
@@ -852,8 +851,8 @@ draw_white_function_modules(struct qr *q, unsigned ver)
 		for (int i = 0; i < 6; i++) {
 			for (int j = 0; j < 3; j++) {
 				int k = q->size - 11 + j;
-				set_module(q, k, i, data & 1);
-				set_module(q, i, k, data & 1);
+				qr_set_module(q, k, i, data & 1);
+				qr_set_module(q, i, k, data & 1);
 				data >>= 1;
 			}
 		}
@@ -891,19 +890,19 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr *q)
 
 	// Draw first copy
 	for (int i = 0; i <= 5; i++)
-		set_module(q, 8, i, (data >> i) & 1);
-	set_module(q, 8, 7, (data >> 6) & 1);
-	set_module(q, 8, 8, (data >> 7) & 1);
-	set_module(q, 7, 8, (data >> 8) & 1);
+		qr_set_module(q, 8, i, (data >> i) & 1);
+	qr_set_module(q, 8, 7, (data >> 6) & 1);
+	qr_set_module(q, 8, 8, (data >> 7) & 1);
+	qr_set_module(q, 7, 8, (data >> 8) & 1);
 	for (int i = 9; i < 15; i++)
-		set_module(q, 14 - i, 8, (data >> i) & 1);
+		qr_set_module(q, 14 - i, 8, (data >> i) & 1);
 
 	// Draw second copy
 	for (int i = 0; i <= 7; i++)
-		set_module(q, q->size - 1 - i, 8, (data >> i) & 1);
+		qr_set_module(q, q->size - 1 - i, 8, (data >> i) & 1);
 	for (int i = 8; i < 15; i++)
-		set_module(q, 8, q->size - 15 + i, (data >> i) & 1);
-	set_module(q, 8, q->size - 8, true);
+		qr_set_module(q, 8, q->size - 15 + i, (data >> i) & 1);
+	qr_set_module(q, 8, q->size - 8, true);
 }
 
 /*
@@ -932,7 +931,7 @@ draw_codewords(const void *data, size_t len, struct qr *q)
 				unsigned y = upward ? q->size - 1 - vert : vert;  // Actual y coordinate
 				if (!qr_get_module(q, x, y) && i < len * 8) {
 					bool v = (p[BM_BYTE(i)] >> (7 - BM_BIT(i))) & 1;
-					set_module(q, x, y, v);
+					qr_set_module(q, x, y, v);
 					i++;
 				}
 				// If there are any remainder bits (0 to 7), they are already
@@ -983,7 +982,7 @@ apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask)
 				break;
 			}
 
-			set_module(q, x, y, qr_get_module(q, x, y) ^ invert);
+			qr_set_module(q, x, y, qr_get_module(q, x, y) ^ invert);
 		}
 	}
 }

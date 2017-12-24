@@ -132,11 +132,17 @@ struct qr_segment {
 };
 
 /*
- * Returns the color of the module (pixel) at the given coordinates, which is either
+ * Return the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
 bool
 qr_get_module(const struct qr *q, unsigned x, unsigned y);
+
+/*
+ * Set the module at the given coordinates, which must be in bounds.
+ */
+void
+qr_set_module(struct qr *q, unsigned x, unsigned y, bool v);
 
 /*
  * Flip n randomly-selected modules.

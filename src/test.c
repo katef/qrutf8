@@ -477,7 +477,7 @@ GetSetModule(void)
 	
 	for (int y = 0; y < size; y++) {  // Clear all to white
 		for (int x = 0; x < size; x++)
-			set_module(&q, x, y, false);
+			qr_set_module(&q, x, y, false);
 	}
 	for (int y = 0; y < size; y++) {  // Check all white
 		for (int x = 0; x < size; x++)
@@ -485,7 +485,7 @@ GetSetModule(void)
 	}
 	for (int y = 0; y < size; y++) {  // Set all to black
 		for (int x = 0; x < size; x++)
-			set_module(&q, x, y, true);
+			qr_set_module(&q, x, y, true);
 	}
 	for (int y = 0; y < size; y++) {  // Check all black
 		for (int x = 0; x < size; x++)
@@ -505,8 +505,8 @@ GetSetModule(void)
 	}
 	
 	// Set some modules to white
-	set_module(&q, 3, 8, false);
-	set_module(&q, 61, 49, false);
+	qr_set_module(&q, 3, 8, false);
+	qr_set_module(&q, 61, 49, false);
 	for (int y = 0; y < size; y++) {  // Check most black
 		for (int x = 0; x < size; x++) {
 			bool white = (x == 3 && y == 8) || (x == 61 && y == 49);
@@ -546,7 +546,7 @@ GetSetModuleRandomly(void)
 		if (isInBounds)
 			modules[y][x] = newColor;
 		if (isInBounds && rand() % 2 == 0)
-			set_module(&q, x, y, newColor);
+			qr_set_module(&q, x, y, newColor);
 		else
 			set_module_bounded(&q, x, y, newColor);
 	}
