@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+
+#include "util.h"
 
 /* Uncomment to dump as a C hex literal string */
 //#define HEXDUMP_CSTR

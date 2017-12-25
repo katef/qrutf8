@@ -16,10 +16,10 @@
 
 #include "internal.h"
 #include "xalloc.h"
+#include "util.h"
 
 #include "encode.c"
 #include "decode.c"
-#include "util.c"
 
 #include <theft.h>
 
