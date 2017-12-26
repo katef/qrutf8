@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <time.h>
 
 #include <qr.h>
@@ -17,9 +18,6 @@
 #include "internal.h"
 #include "xalloc.h"
 #include "util.h"
-
-#include "encode.c"
-#include "decode.c"
 
 #include <theft.h>
 

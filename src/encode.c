@@ -45,30 +45,6 @@
 
 #include "internal.h"
 
-/*
- * The mask pattern used in a QR Code symbol.
- */
-enum qr_mask {
-	// A special value to tell the QR Code encoder to
-	// automatically select an appropriate mask pattern
-	QR_MASK_AUTO = -1,
-
-	// The eight actual mask patterns
-	QR_MASK_0 = 0,
-	QR_MASK_1,
-	QR_MASK_2,
-	QR_MASK_3,
-	QR_MASK_4,
-	QR_MASK_5,
-	QR_MASK_6,
-	QR_MASK_7
-};
-
-static const char ALNUM_CHARSET[] =
-	"0123456789"
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	" $%*+-./:";
-
 static unsigned int
 charset_index(const char *charset, char c)
 {
@@ -98,7 +74,7 @@ count_align(unsigned ver)
  * all function modules are excluded. This includes remainder bits, so it might not be a multiple of 8.
  * The result is in the range [208, 29648]. This could be implemented as a 40-entry lookup table.
  */
-static unsigned
+unsigned
 count_data_bits(unsigned ver)
 {
 	assert(QR_VER_MIN <= ver && ver <= QR_VER_MAX);
@@ -628,9 +604,6 @@ qr_make_eci(long assignVal, void *buf)
 	return seg;
 }
 
-/*
- * Tests whether the given string can be encoded as a segment in alphanumeric mode.
- */
 bool
 qr_isalnum(const char *s)
 {
@@ -647,9 +620,6 @@ qr_isalnum(const char *s)
 	return true;
 }
 
-/*
- * Tests whether the given string can be encoded as a segment in numeric mode.
- */
 bool
 qr_isnumeric(const char *s)
 {

@@ -132,6 +132,33 @@ struct qr_segment {
 };
 
 /*
+ * Returns a segment representing the given binary data encoded in byte mode.
+ */
+struct qr_segment
+qr_make_bytes(const void *data, size_t len);
+
+/*
+ * Returns a segment representing the given string of decimal digits encoded in numeric mode.
+ */
+struct qr_segment
+qr_make_numeric(const char *s, void *buf);
+
+/*
+ * Returns a segment representing the given text string encoded in alphanumeric mode.
+ * The characters allowed are: 0 to 9, A to Z (uppercase only), space,
+ * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
+ */
+struct qr_segment
+qr_make_alnum(const char *s, void *buf);
+
+/*
+ * Returns a segment representing an Extended Channel Interpretation
+ * (ECI) designator with the given assignment value.
+ */
+struct qr_segment
+qr_make_eci(long assignVal, void *buf);
+
+/*
  * Return the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
@@ -150,6 +177,18 @@ qr_set_module(struct qr *q, unsigned x, unsigned y, bool v);
  */
 void
 qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved);
+
+/*
+ * Tests whether the given string can be encoded as a segment in alphanumeric mode.
+ */
+bool
+qr_isalnum(const char *s);
+
+/*
+ * Tests whether the given string can be encoded as a segment in numeric mode.
+ */
+bool
+qr_isnumeric(const char *s);
 
 #endif
 

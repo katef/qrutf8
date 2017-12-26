@@ -14,25 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
 
 #include <qr.h>
 
 #include "internal.h"
-
-typedef enum {
-	QUIRC_SUCCESS = 0,
-	QUIRC_ERROR_INVALID_GRID_SIZE,
-	QUIRC_ERROR_INVALID_VERSION,
-	QUIRC_ERROR_FORMAT_ECC,
-	QUIRC_ERROR_DATA_ECC,
-	QUIRC_ERROR_DATA_OVERFLOW,
-	QUIRC_ERROR_DATA_UNDERFLOW
-} quirc_decode_error_t;
-
-const char *quirc_strerror(quirc_decode_error_t err);
 
 #define MAX_POLY       64
 

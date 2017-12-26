@@ -12,8 +12,7 @@
 #include <qr.h>
 #include <io.h>
 
-#include "encode.c"
-#include "decode.c"
+#include "internal.h"
 #include "ssim.h"
 #include "xalloc.h"
 
