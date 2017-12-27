@@ -1241,16 +1241,22 @@ qr_encode_bytes(const void *data, size_t len, void *tmp, struct qr *q,
 {
 	struct qr_segment seg;
 
-	seg.mode  = QR_MODE_BYTE;
-	int count = count_seg_bits(seg.mode, len);
-	if (count == -1) {
-		return false;
-	}
+	if (len == 0)
+		return qr_encode_segments(NULL, 0, ecl, min, max, mask, boost_ecl, tmp, q);
 
-	seg.len   = len;
-	seg.data  = data;
-	seg.count = count;
+	size_t bufLen = QR_BUF_LEN(max);
+
+	if (len > bufLen)
+		goto error;
+
+	seg = qr_make_bytes(data, len);
 
 	return qr_encode_segments(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, q);
+
+error:
+
+	errno = EMSGSIZE;
+
+	return false;
 }
 
