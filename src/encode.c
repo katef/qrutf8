@@ -1057,8 +1057,6 @@ penalty(const struct qr *q)
 	return result;
 }
 
-/*---- High-level QR Code encoding functions ----*/
-
 /*
  * Renders a QR Code symbol representing the given data segments
  * with the given encoding parameters.
@@ -1079,9 +1077,37 @@ penalty(const struct qr *q)
  * and will result in them being clobbered, but the QR Code output will
  * still be correct. But the q->map array must not overlap tmp or any
  * segment's data buffer.
+ *
+ * QR_MODE_ALNUM/QR_MODE_NUMERIC:
+ *
+ * - The input string must be encoded in UTF-8 and be nul-terminated.
+ * - The arrays tmp and q->map must each have a length
+ *   of at least QR_BUF_LEN(max).
+ * - After the function returns, tmp contains no useful data.
+ * - In the most optimistic case, a QR Code at version 40 with low ECL
+ *   can hold any alphanumeric string up to 4296 characters,
+ *   or any digit string up to 7089 characters.
+ *   These numbers represent the hard upper limit of the QR Code standard.
+ *
+ * QR_MODE_BYTE:
+ *
+ * - The input array range a[0 : dataLen] should normally be
+ *   valid UTF-8 text, but is not required by the QR Code standard.
+ * - The arrays tmp and q->map must each have a length
+ *   of at least QR_BUF_LEN(max).
+ * - After the function returns, the contents of p may have changed,
+ *   and does not represent useful data anymore.
+ * - If successful, the resulting QR Code will use byte mode to encode the data.
+ * - In the most optimistic case, a QR Code at version 40 with low ECL can hold any byte
+ *   sequence up to length 2953. This is the hard upper limit of the QR Code standard.
+ * - Please consult the QR Code specification for information on
+ *   data capacities per version, ECL level, and text encoding mode.
+ *
+ * Please consult the QR Code specification for information on
+ * data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
+qr_encode(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q)
 {
 	assert(segs != NULL || len == 0);
@@ -1166,111 +1192,5 @@ qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 	apply_mask(qtmp.map, q, mask);
 
 	return true;
-}
-
-/*
- * Encodes the given text string to a QR Code symbol, returning true if encoding succeeded.
- * If the data is too long to fit in any version in the given range
- * at the given ECL level, then false is returned.
- * - The input tring ust be encoded in UTF-8 and be nul-terminated.
- * - The variables ecl and mask must correspond to enum constant values.
- * - Requires 1 <= min <= max <= 40.
- * - The arrays tmp and q->map must each have a length
- *   of at least QR_BUF_LEN(max).
- * - After the function returns, tmp contains no useful data.
- * - If successful, the resulting QR Code may use numeric,
- *   alphanumeric, or byte mode to encode the text.
- * - In the most optimistic case, a QR Code at version 40 with low ECL
- *   can hold any UTF-8 string up to 2953 bytes, or any alphanumeric string
- *   up to 4296 characters, or any digit string up to 7089 characters.
- *   These numbers represent the hard upper limit of the QR Code standard.
- * - Please consult the QR Code specification for information on
- *   data capacities per version, ECL level, and text encoding mode.
- */
-bool
-qr_encode_str(const char *s, void *tmp, struct qr *q,
-	enum qr_ecl ecl, unsigned min, unsigned max, enum qr_mask mask, bool boost_ecl)
-{
-	struct qr_segment seg;
-
-	size_t sLen = strlen(s);
-	if (sLen == 0)
-		return qr_encode_segments(NULL, 0, ecl, min, max, mask, boost_ecl, tmp, q);
-	size_t bufLen = QR_BUF_LEN(max);
-
-	seg = qr_make_any(s, tmp);
-
-	switch (seg.mode) {
-	case QR_MODE_NUMERIC:
-		if (qr_calcSegmentBufferSize(QR_MODE_NUMERIC, sLen) > bufLen)
-			goto error;
-		break;
-
-	case QR_MODE_ALNUM:
-		if (qr_calcSegmentBufferSize(QR_MODE_ALNUM, sLen) > bufLen)
-			goto error;
-		break;
-
-	case QR_MODE_BYTE:
-		if (sLen > bufLen)
-			goto error;
-		break;
-
-	default:
-		/* TODO */
-		errno = ENOSYS;
-		return false;
-	}
-
-	return qr_encode_segments(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, q);
-
-error:
-
-	errno = EMSGSIZE;
-
-	return false;
-}
-
-/*
- * Encodes the given binary data to a QR Code symbol, returning true if encoding succeeded.
- * If the data is too long to fit in any version in the given range
- * at the given ECL level, then false is returned.
- * - The input array range a[0 : dataLen] should normally be
- *   valid UTF-8 text, but is not required by the QR Code standard.
- * - The variables ecl and mask must correspond to enum constant values.
- * - Requires 1 <= min <= max <= 40.
- * - The arrays tmp and q->map must each have a length
- *   of at least QR_BUF_LEN(max).
- * - After the function returns, the contents of p may have changed,
- *   and does not represent useful data anymore.
- * - If successful, the resulting QR Code will use byte mode to encode the data.
- * - In the most optimistic case, a QR Code at version 40 with low ECL can hold any byte
- *   sequence up to length 2953. This is the hard upper limit of the QR Code standard.
- * - Please consult the QR Code specification for information on
- *   data capacities per version, ECL level, and text encoding mode.
- */
-bool
-qr_encode_bytes(const void *data, size_t len, void *tmp, struct qr *q,
-	enum qr_ecl ecl, unsigned min, unsigned max, enum qr_mask mask, bool boost_ecl)
-{
-	struct qr_segment seg;
-
-	if (len == 0)
-		return qr_encode_segments(NULL, 0, ecl, min, max, mask, boost_ecl, tmp, q);
-
-	size_t bufLen = QR_BUF_LEN(max);
-
-	if (len > bufLen)
-		goto error;
-
-	seg = qr_make_bytes(data, len);
-
-	return qr_encode_segments(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, q);
-
-error:
-
-	errno = EMSGSIZE;
-
-	return false;
 }
 

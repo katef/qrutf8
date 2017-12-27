@@ -202,8 +202,13 @@ main(int argc, char * const argv[])
 	q.map = map;
 
 	if (filename == NULL) {
+		struct qr_segment seg;
+
+		/* XXX: whatever mode */
+		seg = qr_make_bytes(argv[0], strlen(argv[0]));
+
 		uint8_t tmp[QR_BUF_LEN_MAX];
-		if (!qr_encode_str(argv[0], tmp, &q, ecl, min, max, mask, boost_ecl)) {
+		if (!qr_encode(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, &q)) {
 			exit(EXIT_FAILURE);
 		}
 	} else {

@@ -82,7 +82,7 @@ prop_gated(struct theft *t, void *instance)
 
 		q.map = o->map;
 
-		if (!qr_encode_segments(a, o->o->n, o->o->ecl, o->o->min, o->o->max, o->o->mask, o->o->boost_ecl, tmp, &q)) {
+		if (!qr_encode(a, o->o->n, o->o->ecl, o->o->min, o->o->max, o->o->mask, o->o->boost_ecl, tmp, &q)) {
 free(a);
 			if (errno == EMSGSIZE) {
 				return THEFT_TRIAL_SKIP;
@@ -370,7 +370,7 @@ type_print(FILE *f, const void *instance, void *env)
 	fuzz_print(f, instance);
 
 	if (o->gate == GATE_ENCODE) {
-		fprintf(stderr, "\nqr_encode_segments: %s\n", strerror(o->qr_errno));
+		fprintf(stderr, "\nqr_encode: %s\n", strerror(o->qr_errno));
 		return;
 	}
 

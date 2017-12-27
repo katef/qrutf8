@@ -54,12 +54,8 @@ extern const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4];
 const char *quirc_strerror(quirc_decode_error_t err);
 
 bool
-qr_encode_segments(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
+qr_encode(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
 	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q);
-
-bool
-qr_encode_str(const char *s, void *tmp, struct qr *q,
-	enum qr_ecl ecl, unsigned min, unsigned max, enum qr_mask mask, bool boost_ecl);
 
 quirc_decode_error_t
 quirc_decode(const struct qr *q,
