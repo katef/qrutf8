@@ -159,6 +159,15 @@ struct qr_segment
 qr_make_eci(long assignVal, void *buf);
 
 /*
+ * Returns a segment of whatever mode seems to suit the string.
+ *
+ * This is not neccessarily optimal; it may be more compact overall to break a
+ * string into multiple segments. This interface is provided for caller simplicity only.
+ */
+struct qr_segment
+qr_make_any(const char *s, void *tmp);
+
+/*
  * Return the color of the module (pixel) at the given coordinates, which is either
  * false for white or true for v. The top left corner has the coordinates (x=0, y=0).
  */
