@@ -442,7 +442,7 @@ qr_make_bytes(const void *data, size_t len)
 	struct qr_segment seg;
 	int count;
 
-	assert(data != NULL || len == 0);
+	assert(data != NULL);
 
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
@@ -465,7 +465,7 @@ qr_make_numeric(const char *s, void *buf)
 	size_t rcount;
 
 	assert(s != NULL);
-	assert(buf != NULL || strlen(s) == 0);
+	assert(buf != NULL);
 
 	len = strlen(s);
 
@@ -513,11 +513,13 @@ qr_make_alnum(const char *s, void *buf)
 	struct qr_segment seg;
 	const char *p;
 	size_t rcount;
+	size_t len;
 	int count;
 
-	size_t len = strlen(s);
-
 	assert(s != NULL);
+	assert(buf != NULL);
+
+	len = strlen(s);
 
 	count = count_seg_bits(QR_MODE_ALNUM, len);
 	assert(count != -1);
@@ -562,6 +564,8 @@ qr_make_eci(long assignVal, void *buf)
 {
 	struct qr_segment seg;
 	size_t rcount;
+
+	assert(buf != NULL);
 
 	rcount = 0;
 

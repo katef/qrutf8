@@ -880,12 +880,6 @@ TEST
 MakeBytes(void)
 {
 	{
-		struct qr_segment seg = qr_make_bytes(NULL, 0);
-		ASSERT_EQ(seg.mode, QR_MODE_BYTE);
-		ASSERT_EQ(seg.len, 0);
-		ASSERT_EQ(seg.count, 0);
-	}
-	{
 		const uint8_t data[] = {0x00};
 		struct qr_segment seg = qr_make_bytes(data, 1);
 		ASSERT_EQ(seg.len, 1);
@@ -909,12 +903,6 @@ MakeBytes(void)
 TEST
 MakeNumeric(void)
 {
-	{
-		struct qr_segment seg = qr_make_numeric("", NULL);
-		ASSERT_EQ(seg.mode, QR_MODE_NUMERIC);
-		ASSERT_EQ(seg.len, 0);
-		ASSERT_EQ(seg.count, 0);
-	}
 	{
 		uint8_t buf[1];
 		struct qr_segment seg = qr_make_numeric("9", buf);
@@ -956,12 +944,6 @@ MakeNumeric(void)
 TEST
 MakeAlphanumeric(void)
 {
-	{
-		struct qr_segment seg = qr_make_alnum("", NULL);
-		ASSERT_EQ(seg.mode, QR_MODE_ALNUM);
-		ASSERT_EQ(seg.len, 0);
-		ASSERT_EQ(seg.count, 0);
-	}
 	{
 		uint8_t buf[1];
 		struct qr_segment seg = qr_make_alnum("A", buf);
