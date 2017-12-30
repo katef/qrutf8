@@ -695,21 +695,27 @@ take_bits(struct datastream *ds, int len)
 }
 
 static int
-numeric_tuple(struct qr_segment *seg,
+tuple(struct qr_segment *seg,
 	struct datastream *ds,
-	int bits, int digits)
+	int bits, int digits,
+	const char *charset)
 {
 	int tuple;
 	int i;
+	size_t n;
+
+	assert(charset != NULL);
+
+	n = strlen(charset);
 
 	if (bits_remaining(ds) < bits)
 		return -1;
 
 	tuple = take_bits(ds, bits);
 
-	for (i = digits - 1; i >= 0; i--) {
-		seg->payload[seg->len + i] = tuple % 10 + '0';
-		tuple /= 10;
+	for (i = 0; i < digits; i++) {
+		seg->payload[seg->len + digits - i - 1] = charset[tuple % n];
+		tuple /= n;
 	}
 
 	seg->len += digits;
@@ -721,6 +727,9 @@ static quirc_decode_error_t
 decode_numeric(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
+	static const char *numeric_map =
+		"0123456789";
+
 	int bits = 14;
 	int count;
 
@@ -734,19 +743,19 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 3) {
-		if (numeric_tuple(seg, ds, 10, 3) < 0)
+		if (tuple(seg, ds, 10, 3, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
 		count -= 3;
 	}
 
 	if (count >= 2) {
-		if (numeric_tuple(seg, ds, 7, 2) < 0)
+		if (tuple(seg, ds, 7, 2, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
 		count -= 2;
 	}
 
 	if (count) {
-		if (numeric_tuple(seg, ds, 4, 1) < 0)
+		if (tuple(seg, ds, 4, 1, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
 		count--;
 	}
@@ -754,39 +763,15 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 	return QUIRC_SUCCESS;
 }
 
-static int
-alpha_tuple(struct qr_segment *seg,
-	struct datastream *ds,
-	int bits, int digits)
-{
-	int tuple;
-	int i;
-
-	if (bits_remaining(ds) < bits)
-		return -1;
-
-	tuple = take_bits(ds, bits);
-
-	for (i = 0; i < digits; i++) {
-		static const char *alpha_map =
-			"0123456789"
-			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			" $%*+-./:";
-
-		seg->payload[seg->len + digits - i - 1] =
-			alpha_map[tuple % 45];
-		tuple /= 45;
-	}
-
-	seg->len += digits;
-
-	return 0;
-}
-
 static quirc_decode_error_t
 decode_alnum(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
+	static const char *alpha_map =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		" $%*+-./:";
+
 	int bits = 13;
 	int count;
 
@@ -800,13 +785,13 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 2) {
-		if (alpha_tuple(seg, ds, 11, 2) < 0)
+		if (tuple(seg, ds, 11, 2, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
 		count -= 2;
 	}
 
 	if (count) {
-		if (alpha_tuple(seg, ds, 6, 1) < 0)
+		if (tuple(seg, ds, 6, 1, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
 		count--;
 	}
