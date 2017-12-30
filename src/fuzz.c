@@ -11,6 +11,7 @@
 
 #include "internal.h"
 #include "fuzz.h"
+#include "seg.h"
 #include "xalloc.h"
 #include "util.h"
 

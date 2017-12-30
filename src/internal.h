@@ -37,14 +37,11 @@ static const char ALNUM_CHARSET[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	" $%*+-./:";
 
-size_t
-xseg_len(const struct qr_segment *a, size_t n);
-
 unsigned
 count_data_bits(unsigned ver);
 
-size_t
-qr_calcSegmentBufferSize(enum qr_mode mode, size_t len);
+void
+append_bits(unsigned v, size_t n, void *buf, size_t *count);
 
 unsigned
 getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX]);

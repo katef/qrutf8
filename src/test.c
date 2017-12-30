@@ -54,8 +54,10 @@
 #include <qr.h>
 
 #include "xalloc.h"
+#include "util.h"
 
 #include "encode.c"
+#include "seg.c"
 
 #include "../share/git/greatest/greatest.h"
 

@@ -14,6 +14,7 @@
 
 #include "internal.h"
 #include "ssim.h"
+#include "seg.h"
 #include "xalloc.h"
 
 enum img {
