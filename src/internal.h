@@ -37,6 +37,9 @@ static const char ALNUM_CHARSET[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	" $%*+-./:";
 
+size_t
+xseg_len(const struct qr_segment *a, size_t n);
+
 unsigned
 count_data_bits(unsigned ver);
 

@@ -7,6 +7,8 @@
 
 #include <qr.h>
 
+#include "util.h"
+
 static void
 utf8(int cp, char c[])
 {
@@ -243,5 +245,57 @@ qr_print_svg(FILE *f, const struct qr *q, bool invert)
 	}
 
 	fprintf(f, "</svg>");
+}
+
+/* XXX */
+size_t
+xseg_len(const struct qr_segment *a, size_t n)
+{
+	size_t len;
+	size_t j;
+
+	assert(a != NULL);
+
+	len = 0;
+
+	for (j = 0; j < n; j++) {
+		len += a[j].len;
+	}
+
+	return len;
+}
+
+void
+seg_print(FILE *f, size_t n, const struct qr_segment *a)
+{
+	size_t j;
+
+	assert(f != NULL);
+	assert(a != NULL);
+
+	printf("    Segments {\n");
+	for (j = 0; j < n; j++) {
+		const char *dts;
+
+		switch (a[j].mode) {
+		case QR_MODE_NUMERIC: dts = "NUMERIC"; break;
+		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
+		case QR_MODE_BYTE:    dts = "BYTE";    break;
+		case QR_MODE_KANJI:   dts = "KANJI";   break;
+		default: dts = "?"; break;
+		}
+
+		printf("    %zu: mode=%d (%s)\n", j, a[j].mode, dts);
+		printf("      source string: len=%zu bytes\n", a[j].len);
+		if (qr_isalnum(a[j].payload) || qr_isnumeric(a[j].payload)) {
+			printf("      \"%s\"\n", a[j].payload);
+		} else {
+			hexdump(stdout, (void *) a[j].payload, a[j].len);
+		}
+		printf("      encoded data: count=%zu bits\n", a[j].count);
+		hexdump(stdout, a[j].data, BM_LEN(a[j].count));
+	}
+	printf("    }\n");
+	printf("    Segments total data length: %zu\n", xseg_len(a, n));
 }
 

@@ -79,6 +79,68 @@ yv12(const struct qr *q, YV12_BUFFER_CONFIG *img)
 	}
 }
 
+static void
+encode_file(struct qr *q, const char *filename)
+{
+	FILE *f;
+
+	assert(q != NULL);
+	assert(filename != NULL);
+
+	f = fopen(filename, "rb");
+	if (f == NULL) {
+		perror(filename);
+		exit(EXIT_FAILURE);
+	}
+
+	/* TODO: separate mechanism to invert from file */
+	if (!qr_load_pbm(f, q, false)) {
+		/* TODO: */
+		exit(EXIT_FAILURE);
+	}
+
+	fclose(f);
+}
+
+static void
+encode_argv(struct qr *q, int argc, char * const argv[],
+	enum qr_ecl ecl,
+	unsigned min, unsigned max,
+	enum qr_mask mask,
+	bool boost_ecl)
+{
+	struct qr_segment *a;
+	void **buf;
+	size_t i, n;
+
+	assert(q != NULL);
+	assert(argc >= 0);
+	assert(argv != NULL);
+
+	n = argc;
+	a = xmalloc(sizeof *a * n);
+
+	/* XXX: similar to fuzz_instance's arrays */
+	buf = xmalloc(sizeof *buf * n);
+
+	for (i = 0; i < n; i++) {
+		buf[i] = xmalloc(QR_BUF_LEN_MAX);
+		a[i] = qr_make_any(argv[i], buf[i]);
+	}
+
+	uint8_t tmp[QR_BUF_LEN_MAX];
+	if (!qr_encode(a, n, ecl, min, max, mask, boost_ecl, tmp, q)) {
+		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < n; i++) {
+		free(buf[i]);
+	}
+
+	free(a);
+	free(buf);
+}
+
 int
 main(int argc, char * const argv[])
 {
@@ -182,49 +244,23 @@ main(int argc, char * const argv[])
 
 		argc -= optind;
 		argv += optind;
-
-		if (filename != NULL) {
-			if (argc != 0) {
-			exit(EXIT_FAILURE);
-			}
-		} else {
-			if (argc != 1) {
-				exit(EXIT_FAILURE);
-			}
-		}
 	}
 
-	/* TODO: iterate over argv[], guess at type for each segment */
 	/* TODO: micro-QR */
 
 	struct qr q;
 	uint8_t map[QR_BUF_LEN_MAX];
 	q.map = map;
 
-	if (filename == NULL) {
-		struct qr_segment seg;
-
-		/* XXX: whatever mode */
-		seg = qr_make_bytes(argv[0], strlen(argv[0]));
-
-		uint8_t tmp[QR_BUF_LEN_MAX];
-		if (!qr_encode(&seg, 1, ecl, min, max, mask, boost_ecl, tmp, &q)) {
+	if (filename != NULL) {
+		if (argc != 0) {
 			exit(EXIT_FAILURE);
 		}
+
+		encode_file(&q, filename);
 	} else {
-		FILE *f;
-
-		/* Open input file. */
-		f = fopen(filename, "rb");
-		if (f == NULL) {
-			exit(EXIT_FAILURE);
-		}
-
-		if (!qr_load_pbm(f, &q, invert)) {
-			exit(EXIT_FAILURE);
-		}
-
-		fclose(f);
+		encode_argv(&q, argc, argv,
+			ecl, min, max, mask, boost_ecl);
 	}
 
 	qr_noise(&q, noise, 0, false);
@@ -258,8 +294,7 @@ main(int argc, char * const argv[])
 			printf("    Noise: %u\n", noise);
 			printf("    Format corrections: %u\n", data.format_corrections);
 			printf("    Codeword corrections: %u\n", data.codeword_corrections);
-			printf("    Length: %zu\n", data.payload_len);
-			printf("    Payload: %s\n", data.payload);
+			seg_print(stdout, data.n, data.a);
 		}
 
 		printf("\n");

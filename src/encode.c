@@ -443,6 +443,11 @@ qr_make_bytes(const void *data, size_t len)
 	int count;
 
 	assert(data != NULL);
+	assert(len <= QR_PAYLOAD_MAX - 1);
+
+	// XXX: mixing \0-terminated and binary data
+	memcpy(seg.payload, data, len);
+	seg.payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
@@ -466,8 +471,12 @@ qr_make_numeric(const char *s, void *buf)
 
 	assert(s != NULL);
 	assert(buf != NULL);
+	assert(len <= QR_PAYLOAD_MAX - 1);
 
 	len = strlen(s);
+
+	memcpy(seg.payload, buf, len);
+	seg.payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_NUMERIC, len);
 	assert(count != -1);
@@ -520,6 +529,11 @@ qr_make_alnum(const char *s, void *buf)
 	assert(buf != NULL);
 
 	len = strlen(s);
+
+	assert(len <= QR_PAYLOAD_MAX - 1);
+
+	memcpy(seg.payload, buf, len);
+	seg.payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_ALNUM, len);
 	assert(count != -1);
@@ -585,10 +599,11 @@ qr_make_eci(long assignVal, void *buf)
 		assert(false);
 	}
 
-	seg.mode  = QR_MODE_ECI;
-	seg.len   = 0;
-	seg.data  = buf;
-	seg.count = rcount;
+	seg.mode       = QR_MODE_ECI;
+	seg.payload[0] = '\0';
+	seg.len        = 0;
+	seg.data       = buf;
+	seg.count      = rcount;
 
 	return seg;
 }
@@ -1111,8 +1126,12 @@ penalty(const struct qr *q)
  * data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
-	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q)
+qr_encode(const struct qr_segment segs[], size_t len,
+	enum qr_ecl ecl,
+	unsigned min, unsigned max,
+	int mask,
+	bool boost_ecl,
+	void *tmp, struct qr *q)
 {
 	assert(segs != NULL || len == 0);
 	assert(QR_VER_MIN <= min && min <= max && max <= QR_VER_MAX);

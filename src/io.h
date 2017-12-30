@@ -17,5 +17,8 @@ qr_print_svg(FILE *f, const struct qr *q, bool invert);
 bool
 qr_load_pbm(FILE *f, struct qr *q, bool invert);
 
+void
+seg_print(FILE *f, size_t n, const struct qr_segment *a);
+
 #endif
 

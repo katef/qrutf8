@@ -15,6 +15,7 @@ struct fuzz_segment {
 	char buf[BM_LEN(32767) + 1]; /* XXX: centralise maths */
 
 	/* source data */
+	/* TODO: move to qr_segment */
 	char s[QR_PAYLOAD_MAX];
 	size_t len;
 };

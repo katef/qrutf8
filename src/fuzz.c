@@ -189,7 +189,7 @@ fuzz_print(FILE *f, const struct fuzz_instance *o)
 		default: dts = "?"; break;
 		}
 
-		printf("      %zu: %d (%s)\n", j, o->a[j].seg.mode, dts);
+		printf("    %zu: mode=%d (%s)\n", j, o->a[j].seg.mode, dts);
 		printf("      source string: len=%zu bytes\n", o->a[j].len);
 		if (qr_isalnum(o->a[j].s) || qr_isnumeric(o->a[j].s)) {
 			printf("      \"%s\"\n", o->a[j].s);

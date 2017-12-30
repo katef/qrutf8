@@ -192,20 +192,39 @@ free(a);
 
 	{
 		size_t j;
-		const char *p;
 
-		if ((size_t) data.payload_len != seg_len(o->o->a, o->o->n)) {
+		if (data.n != o->o->n) {
 			snprintf(o->v_err, sizeof o->v_err,
-				"payload length mismatch: got=%zu, expected=%zu",
-				(size_t) data.payload_len, seg_len(o->o->a, o->o->n));
+				"segment count mismatch: got=%zu, expected=%zu",
+				data.n, o->o->n);
 			o->gate = GATE_PAYLOAD;
 			return THEFT_TRIAL_FAIL;
 		}
 
-		p = data.payload;
+		if (xseg_len(data.a, data.n) != seg_len(o->o->a, o->o->n)) {
+			snprintf(o->v_err, sizeof o->v_err,
+				"payload length mismatch: got=%zu, expected=%zu",
+				xseg_len(data.a, data.n), seg_len(o->o->a, o->o->n));
+			o->gate = GATE_PAYLOAD;
+			return THEFT_TRIAL_FAIL;
+		}
 
 		for (j = 0; j < o->o->n; j++) {
-			assert(p - data.payload <= (ptrdiff_t) data.payload_len);
+			if (data.a[j].mode != o->o->a[j].seg.mode) {
+				snprintf(o->v_err, sizeof o->v_err,
+					"sement mode mismatch: got=%u, expected=%u",
+					data.a[j].mode, o->o->a[j].seg.mode);
+				o->gate = GATE_PAYLOAD;
+				return THEFT_TRIAL_FAIL;
+			}
+
+			if (data.a[j].len != o->o->a[j].seg.len) {
+				snprintf(o->v_err, sizeof o->v_err,
+					"sement length mismatch: got=%zu, expected=%zu",
+					data.a[j].len, o->o->a[j].seg.len);
+				o->gate = GATE_PAYLOAD;
+				return THEFT_TRIAL_FAIL;
+			}
 
 			switch (o->o->a[j].seg.mode) {
 			case QR_MODE_NUMERIC:
@@ -219,17 +238,16 @@ free(a);
 				break;
 			}
 
+			assert(data.a[j].payload != NULL);
 			assert(o->o->a[j].s != NULL);
 
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(p, o->o->a[j].s, o->o->a[j].len)) {
+			if (0 != memcmp(data.a[j].payload, o->o->a[j].s, o->o->a[j].len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
-
-			p += o->o->a[j].len;
 		}
 	}
 
@@ -348,8 +366,16 @@ static void
 type_free(void *instance, void *env)
 {
 	struct type_instance *o = instance;
+	size_t j;
 
 	(void) env;
+
+	if (o->gate > GATE_DECODE) {
+		for (j = 0; j < o->data.n; j++) {
+			free(o->data.a[j].payload);
+		}
+		free(o->data.a);
+	}
 
 	fuzz_free(o->o);
 
@@ -408,10 +434,7 @@ type_print(FILE *f, const void *instance, void *env)
 		return;
 	}
 
-	{
-		printf("	Length: %zu\n", o->data.payload_len);
-		printf("	Payload: %s\n", o->data.payload);
-	}
+	seg_print(stdout, o->data.n, o->data.a);
 
 	if (o->gate == GATE_PAYLOAD) {
 		printf("metadata verification failed: %s\n", o->v_err);

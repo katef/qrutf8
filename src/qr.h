@@ -93,8 +93,8 @@ struct qr_data {
 	 * Data payload. For the Kanji mode, payload is encoded as Shift-JIS.
 	 * For all other modes, payload is text encoded per the source.
 	 */
-	char payload[QR_PAYLOAD_MAX];
-	size_t payload_len;
+	size_t n;
+	struct qr_segment *a;
 
 	/* ECI assignment number */
 	uint32_t eci;
@@ -105,6 +105,8 @@ struct qr_data {
  */
 struct qr_segment {
 	enum qr_mode mode;
+
+	char payload[QR_PAYLOAD_MAX]; // TODO
 
 	/*
 	 * The length of this segment's unencoded data.
