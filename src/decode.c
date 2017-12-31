@@ -484,23 +484,6 @@ read_format(const struct qr *q,
 }
 
 static int
-mask_bit(int mask, int i, int j)
-{
-	switch (mask) {
-	case 0: return !((i + j) % 2);
-	case 1: return !(i % 2);
-	case 2: return !(j % 3);
-	case 3: return !((i + j) % 3);
-	case 4: return !(((i / 2) + (j / 3)) % 2);
-	case 5: return !((i * j) % 2 + (i * j) % 3);
-	case 6: return !(((i * j) % 2 + (i * j) % 3) % 2);
-	case 7: return !(((i * j) % 3 + (i + j) % 2) % 2);
-	}
-
-	return 0;
-}
-
-static int
 reserved_cell(unsigned ver, unsigned x, unsigned y)
 {
 	size_t size = QR_SIZE(ver);

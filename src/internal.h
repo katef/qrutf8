@@ -12,26 +12,6 @@ typedef enum {
 	QUIRC_ERROR_DATA_UNDERFLOW
 } quirc_decode_error_t;
 
-/*
- * The mask pattern used in a QR Code symbol.
- */
-enum qr_mask {
-	// A special value to tell the QR Code encoder to
-	// automatically select an appropriate mask pattern
-	QR_MASK_AUTO = -1,
-
-	// The eight actual mask patterns
-	QR_MASK_0 = 0,
-	QR_MASK_1,
-	QR_MASK_2,
-	QR_MASK_3,
-	QR_MASK_4,
-	QR_MASK_5,
-	QR_MASK_6,
-	QR_MASK_7
-};
-
-
 static const char ALNUM_CHARSET[] =
 	"0123456789"
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -52,6 +32,12 @@ extern const int8_t ECL_CODEWORDS_PER_BLOCK[QR_VER_MAX + 1][4];
 extern const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4];
 
 const char *quirc_strerror(quirc_decode_error_t err);
+
+bool
+mask_bit(enum qr_mask mask, unsigned x, unsigned y);
+
+void
+apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask);
 
 bool
 qr_encode(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,

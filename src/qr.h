@@ -6,6 +6,25 @@
 #define QR_VER_MIN 1
 #define QR_VER_MAX 40
 
+/*
+ * The mask pattern used in a QR Code symbol.
+ */
+enum qr_mask {
+	// A special value to tell the QR Code encoder to
+	// automatically select an appropriate mask pattern
+	QR_MASK_AUTO = -1,
+
+	// The eight actual mask patterns
+	QR_MASK_0 = 0,
+	QR_MASK_1,
+	QR_MASK_2,
+	QR_MASK_3,
+	QR_MASK_4,
+	QR_MASK_5,
+	QR_MASK_6,
+	QR_MASK_7
+};
+
 struct qr {
 	/*
 	 * The side length of modules in the QR-code.
@@ -84,7 +103,7 @@ enum qr_ecl {
 struct qr_data {
 	unsigned ver;
 	unsigned ecc_level; /* TODO: enum */
-	unsigned mask; /* TODO: enum */
+	enum qr_mask mask;
 
 	unsigned format_corrections;
 	unsigned codeword_corrections;

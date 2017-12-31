@@ -522,51 +522,6 @@ draw_codewords(const void *data, size_t len, struct qr *q)
 }
 
 /*
- * XORs the data modules in this QR Code with the given mask pattern. Due to XOR's mathematical
- * properties, calling apply_mask(..., m) twice with the same value is equivalent to no change at all.
- * This means it is possible to apply a mask, undo it, and try another mask. Note that a final
- * well-formed QR Code symbol needs exactly one mask applied (not zero, not two, etc.).
- */
-static void
-apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask)
-{
-	assert(q != NULL);
-	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
-	assert(0 <= mask && mask <= 7);  // Disallows QR_MASK_AUTO
-
-	for (unsigned y = 0; y < q->size; y++) {
-		for (unsigned x = 0; x < q->size; x++) {
-			struct qr tmp;
-
-			tmp.size = q->size;
-			tmp.map  = (void *) functionModules;
-
-			if (qr_get_module(&tmp, x, y)) {
-				continue;
-			}
-
-			bool invert = false;  // Dummy value
-			switch (mask) {
-			case QR_MASK_0: invert = (x + y) % 2 == 0;                   break;
-			case QR_MASK_1: invert = y % 2 == 0;                         break;
-			case QR_MASK_2: invert = x % 3 == 0;                         break;
-			case QR_MASK_3: invert = (x + y) % 3 == 0;                   break;
-			case QR_MASK_4: invert = (x / 3 + y / 2) % 2 == 0;           break;
-			case QR_MASK_5: invert = x * y % 2 + x * y % 3 == 0;         break;
-			case QR_MASK_6: invert = (x * y % 2 + x * y % 3) % 2 == 0;   break;
-			case QR_MASK_7: invert = ((x + y) % 2 + x * y % 3) % 2 == 0; break;
-
-			case QR_MASK_AUTO:
-				assert(!"unreached");
-				break;
-			}
-
-			qr_set_module(q, x, y, qr_get_module(q, x, y) ^ invert);
-		}
-	}
-}
-
-/*
  * Calculates and returns the penalty score based on state of the given QR Code's current modules.
  * This is used by the automatic mask choice algorithm to find the mask pattern that yields the lowest score.
  */
