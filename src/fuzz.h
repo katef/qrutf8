@@ -13,11 +13,6 @@ struct fuzz_hook {
 struct fuzz_segment {
 	struct qr_segment *seg;
 	char buf[BM_LEN(32767) + 1]; /* XXX: centralise maths */
-
-	/* source data */
-	/* TODO: move to qr_segment */
-	char s[QR_PAYLOAD_MAX];
-	size_t len;
 };
 
 struct fuzz_instance {

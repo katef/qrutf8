@@ -69,7 +69,7 @@ seg_len(const struct fuzz_segment *a, size_t n)
 	len = 0;
 
 	for (j = 0; j < n; j++) {
-		len += a[j].len;
+		len += a[j].seg->len;
 	}
 
 	return len;
@@ -80,7 +80,6 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 {
 	struct fuzz_instance *o;
 	size_t j;
-	unsigned n;
 
 	assert(hook != NULL);
 
@@ -90,8 +89,12 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 	hook->fuzz_ver(opaque, &o->min, &o->max);
 	hook->fuzz_mask(opaque, &o->mask);
 
-	hook->fuzz_uint(opaque, &n, sizeof o->a / sizeof *o->a);
-	o->n = n;
+	{
+		unsigned n;
+
+		hook->fuzz_uint(opaque, &n, sizeof o->a / sizeof *o->a);
+		o->n = n;
+	}
 
 	/* TODO: permutate segments */
 
@@ -101,44 +104,52 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 		hook->fuzz_mode(opaque, &mode);
 
 		switch (mode) {
-		case QR_MODE_NUMERIC:
-			hook->fuzz_uint(opaque, &n, sizeof o->a[j].s - 1);
-			o->a[j].len = n;
+		case QR_MODE_NUMERIC: {
+			char payload[QR_PAYLOAD_MAX];
+			unsigned n;
 
-			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			hook->fuzz_uint(opaque, &n, sizeof payload - 1);
+
+			if (qr_calcSegmentBufferSize(mode, n) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			fuzz_str(opaque, hook, o->a[j].s, o->a[j].len, "0123456789");
-			assert(strlen(o->a[j].s) == o->a[j].len);
-			assert(qr_isnumeric(o->a[j].s));
-			o->a[j].seg = qr_make_numeric(o->a[j].s, o->a[j].buf);
+			fuzz_str(opaque, hook, payload, n, "0123456789");
+			assert(strlen(payload) == n);
+			assert(qr_isnumeric(payload));
+			o->a[j].seg = qr_make_numeric(payload, o->a[j].buf);
 			break;
+		}
 
-		case QR_MODE_ALNUM:
-			hook->fuzz_uint(opaque, &n, sizeof o->a[j].s - 1);
-			o->a[j].len = n;
+		case QR_MODE_ALNUM: {
+			char payload[QR_PAYLOAD_MAX];
+			unsigned n;
 
-			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			hook->fuzz_uint(opaque, &n, sizeof payload - 1);
+
+			if (qr_calcSegmentBufferSize(mode, n) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			fuzz_str(opaque, hook, o->a[j].s, o->a[j].len, ALNUM_CHARSET);
-			assert(strlen(o->a[j].s) == o->a[j].len);
-			assert(qr_isalnum(o->a[j].s));
-			o->a[j].seg = qr_make_alnum(o->a[j].s, o->a[j].buf);
+			fuzz_str(opaque, hook, payload, n, ALNUM_CHARSET);
+			assert(strlen(payload) == n);
+			assert(qr_isalnum(payload));
+			o->a[j].seg = qr_make_alnum(payload, o->a[j].buf);
 			break;
+		}
 
 		case QR_MODE_BYTE: {
-			hook->fuzz_uint(opaque, &n, sizeof o->a[j].s);
-			o->a[j].len = n;
+			char payload[QR_PAYLOAD_MAX];
+			unsigned n;
 
-			if (qr_calcSegmentBufferSize(mode, o->a[j].len) > QR_BUF_LEN(o->max)) {
+			hook->fuzz_uint(opaque, &n, sizeof payload);
+
+			if (qr_calcSegmentBufferSize(mode, n) > QR_BUF_LEN(o->max)) {
 				goto skip;
 			}
 
-			fuzz_bytes(opaque, hook, o->a[j].s, o->a[j].len);
-			o->a[j].seg = qr_make_bytes(o->a[j].s, o->a[j].len);
+			fuzz_bytes(opaque, hook, payload, n);
+			o->a[j].seg = qr_make_bytes(payload, n);
 			break;
 		}
 
@@ -204,11 +215,11 @@ fuzz_print(FILE *f, const struct fuzz_instance *o)
 		}
 
 		printf("    %zu: mode=%d (%s)\n", j, o->a[j].seg->mode, dts);
-		printf("      source string: len=%zu bytes\n", o->a[j].len);
-		if (qr_isalnum(o->a[j].s) || qr_isnumeric(o->a[j].s)) {
-			printf("      \"%s\"\n", o->a[j].s);
+		printf("      source string: len=%zu bytes\n", o->a[j].seg->len);
+		if (qr_isalnum(o->a[j].seg->payload) || qr_isnumeric(o->a[j].seg->payload)) {
+			printf("      \"%s\"\n", o->a[j].seg->payload);
 		} else {
-			hexdump(stdout, (void *) o->a[j].s, o->a[j].len);
+			hexdump(stdout, (void *) o->a[j].seg->payload, o->a[j].seg->len);
 		}
 		printf("      encoded data: count=%zu bits\n", o->a[j].seg->count);
 		hexdump(stdout, o->a[j].seg->data, BM_LEN(o->a[j].seg->count));

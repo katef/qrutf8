@@ -240,10 +240,10 @@ free(a);
 			}
 
 			assert(data.a[j]->payload != NULL);
-			assert(o->o->a[j].s != NULL);
+			assert(o->o->a[j].seg->payload != NULL);
 
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(data.a[j]->payload, o->o->a[j].s, o->o->a[j].len)) {
+			if (0 != memcmp(data.a[j]->payload, o->o->a[j].seg->payload, o->o->a[j].seg->len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
