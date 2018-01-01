@@ -156,20 +156,19 @@ prop_gated(struct theft *t, void *instance)
 			return THEFT_TRIAL_FAIL;
 		}
 
-		enum qr_ecl ecl[] = { QR_ECL_MEDIUM, QR_ECL_LOW, QR_ECL_HIGH, QR_ECL_QUARTILE };
 		if (o->o->boost_ecl) {
-			if (ecl[data.ecc_level] < o->o->ecl) {
+			if (data.ecl < o->o->ecl) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
-					ecl[data.ecc_level], o->o->ecl);
+					data.ecl, o->o->ecl);
 				o->gate = GATE_METADATA;
 				return THEFT_TRIAL_FAIL;
 			}
 		} else {
-			if (ecl[data.ecc_level] != o->o->ecl) {
+			if (data.ecl != o->o->ecl) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"ecl mismatch: got=%d, expected=%d",
-					ecl[data.ecc_level], o->o->ecl);
+					data.ecl, o->o->ecl);
 				o->gate = GATE_METADATA;
 				return THEFT_TRIAL_FAIL;
 			}
@@ -406,7 +405,7 @@ type_print(FILE *f, const void *instance, void *env)
 
 	{
 		printf("	Version: %u\n", o->data.ver);
-		printf("	ECC level: %c\n", "MLHQ"[o->data.ecc_level]);
+		printf("	ECC level: %c\n", "MLHQ"[o->data.ecl]);
 		printf("	Mask: %d\n", o->data.mask);
 
 		if (o->data.eci) {

@@ -89,12 +89,11 @@ enum qr_mode {
 	QR_MODE_ECI     = 0x7
 };
 
-/* TODO: renumber per encoding */
 enum qr_ecl {
-	QR_ECL_LOW = 0,
-	QR_ECL_MEDIUM,
-	QR_ECL_QUARTILE,
-	QR_ECL_HIGH
+	QR_ECL_LOW      = 1,
+	QR_ECL_MEDIUM   = 0,
+	QR_ECL_QUARTILE = 3,
+	QR_ECL_HIGH     = 2
 };
 
 /* XXX: define in terms of something else */
@@ -102,7 +101,7 @@ enum qr_ecl {
 
 struct qr_data {
 	unsigned ver;
-	unsigned ecc_level; /* TODO: enum */
+	enum qr_ecl ecl;
 	enum qr_mask mask;
 
 	/*

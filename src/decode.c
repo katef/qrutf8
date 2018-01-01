@@ -477,7 +477,7 @@ read_format(const struct qr *q,
 		return err;
 
 	fdata = format >> 10;
-	data->ecc_level = fdata >> 3;
+	data->ecl = fdata >> 3;
 	data->mask = fdata & 7;
 
 	return QUIRC_SUCCESS;
@@ -592,18 +592,9 @@ static quirc_decode_error_t
 codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	struct datastream *ds)
 {
-	enum qr_ecl ecl;
-	switch (data->ecc_level) {
-	case 1: ecl = QR_ECL_LOW; break;
-	case 0: ecl = QR_ECL_MEDIUM; break;
-	case 3: ecl = QR_ECL_QUARTILE; break;
-	case 2: ecl = QR_ECL_HIGH; break;
-	default: assert(!"unreached"); abort();
-	}
-
-	const int blockEccLen = ECL_CODEWORDS_PER_BLOCK[data->ver][ecl];
+	const int blockEccLen = ECL_CODEWORDS_PER_BLOCK[data->ver][data->ecl];
 	const int rawCodewords = count_data_bits(data->ver) / 8;
-	const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[data->ver][ecl];
+	const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[data->ver][data->ecl];
 	const int numShortBlocks = numBlocks - rawCodewords % numBlocks;
 	const int ecc_bs = rawCodewords / numBlocks;
 	const int shortBlockDataLen = ecc_bs - blockEccLen;

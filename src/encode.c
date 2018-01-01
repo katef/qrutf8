@@ -451,14 +451,7 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr *q)
 
 	// Calculate error correction code and pack bits
 	assert(0 <= mask && mask <= 7);
-	int data = -1;  // Dummy value
-	switch (ecl) {
-	case QR_ECL_LOW     :  data = 1;  break;
-	case QR_ECL_MEDIUM  :  data = 0;  break;
-	case QR_ECL_QUARTILE:  data = 3;  break;
-	case QR_ECL_HIGH    :  data = 2;  break;
-	default:  assert(false);
-	}
+	int data = (int) ecl;
 	data = data << 3 | mask;  // ecl-derived value is uint2, mask is uint3
 	int rem = data;
 	for (int i = 0; i < 10; i++)
@@ -676,7 +669,8 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 {
 	assert(segs != NULL || len == 0);
 	assert(QR_VER_MIN <= min && min <= max && max <= QR_VER_MAX);
-	assert(0 <= ecl && ecl <= 3 && -1 <= mask && mask <= 7);
+	assert(0 <= ecl && ecl <= 3);
+	assert(-1 <= mask && mask <= 7);
 
 	// Find the minimal version number to use
 	unsigned ver;
@@ -695,9 +689,16 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 
 	// Increase the error correction level while the data still fits in the current version number
 	if (boost_ecl) {
-		for (int i = QR_ECL_MEDIUM; i <= QR_ECL_HIGH; i++) {
-			if (dataUsedBits <= count_codewords(ver, i) * 8) {
-				ecl = i;
+		const enum qr_ecl e[] = {
+			QR_ECL_LOW,
+			QR_ECL_MEDIUM,
+			QR_ECL_QUARTILE,
+			QR_ECL_HIGH
+		};
+
+		for (size_t i = 0; i < sizeof e / sizeof *e; i++) {
+			if (dataUsedBits <= count_codewords(ver, e[i]) * 8) {
+				ecl = e[i];
 			}
 		}
 	}
