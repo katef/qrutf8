@@ -305,7 +305,7 @@ qr_make_numeric(const char *s, void *buf)
 
 	len = strlen(s);
 
-	memcpy(seg->payload, buf, len);
+	memcpy(seg->payload, s, len);
 	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_NUMERIC, len);
@@ -367,7 +367,7 @@ qr_make_alnum(const char *s, void *buf)
 
 	assert(len <= QR_PAYLOAD_MAX - 1);
 
-	memcpy(seg->payload, buf, len);
+	memcpy(seg->payload, s, len);
 	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_ALNUM, len);
