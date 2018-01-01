@@ -12,7 +12,6 @@ struct fuzz_hook {
 
 struct fuzz_segment {
 	struct qr_segment *seg;
-	char buf[BM_LEN(32767) + 1]; /* XXX: centralise maths */
 };
 
 struct fuzz_instance {

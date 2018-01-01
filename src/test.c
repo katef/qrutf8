@@ -908,24 +908,21 @@ TEST
 MakeNumeric(void)
 {
 	{
-		uint8_t buf[1];
-		struct qr_segment *seg = qr_make_numeric("9", buf);
+		struct qr_segment *seg = qr_make_numeric("9");
 		ASSERT_EQ(seg->len, 1);
 		ASSERT_EQ(seg->count, 4);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x90);
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[1];
-		struct qr_segment *seg = qr_make_numeric("81", buf);
+		struct qr_segment *seg = qr_make_numeric("81");
 		ASSERT_EQ(seg->len, 2);
 		ASSERT_EQ(seg->count, 7);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA2);
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[2];
-		struct qr_segment *seg = qr_make_numeric("673", buf);
+		struct qr_segment *seg = qr_make_numeric("673");
 		ASSERT_EQ(seg->len, 3);
 		ASSERT_EQ(seg->count, 10);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA8);
@@ -933,8 +930,7 @@ MakeNumeric(void)
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[5];
-		struct qr_segment *seg = qr_make_numeric("3141592653", buf);
+		struct qr_segment *seg = qr_make_numeric("3141592653");
 		ASSERT_EQ(seg->len, 10);
 		ASSERT_EQ(seg->count, 34);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x4E);
@@ -953,16 +949,14 @@ TEST
 MakeAlphanumeric(void)
 {
 	{
-		uint8_t buf[1];
-		struct qr_segment *seg = qr_make_alnum("A", buf);
+		struct qr_segment *seg = qr_make_alnum("A");
 		ASSERT_EQ(seg->len, 1);
 		ASSERT_EQ(seg->count, 6);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x28);
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[2];
-		struct qr_segment *seg = qr_make_alnum("%:", buf);
+		struct qr_segment *seg = qr_make_alnum("%:");
 		ASSERT_EQ(seg->len, 2);
 		ASSERT_EQ(seg->count, 11);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xDB);
@@ -970,8 +964,7 @@ MakeAlphanumeric(void)
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[3];
-		struct qr_segment *seg = qr_make_alnum("Q R", buf);
+		struct qr_segment *seg = qr_make_alnum("Q R");
 		ASSERT_EQ(seg->len, 3);
 		ASSERT_EQ(seg->count, 17);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x96);
@@ -988,8 +981,7 @@ TEST
 MakeEci(void)
 {
 	{
-		uint8_t buf[1];
-		struct qr_segment *seg = qr_make_eci(127, buf);
+		struct qr_segment *seg = qr_make_eci(127);
 		ASSERT_EQ(seg->mode, QR_MODE_ECI);
 		ASSERT_EQ(seg->len, 0);
 		ASSERT_EQ(seg->count, 8);
@@ -997,8 +989,7 @@ MakeEci(void)
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[2];
-		struct qr_segment *seg = qr_make_eci(10345, buf);
+		struct qr_segment *seg = qr_make_eci(10345);
 		ASSERT_EQ(seg->len, 0);
 		ASSERT_EQ(seg->count, 16);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA8);
@@ -1006,8 +997,7 @@ MakeEci(void)
 		seg_free(seg);
 	}
 	{
-		uint8_t buf[3];
-		struct qr_segment *seg = qr_make_eci(999999, buf);
+		struct qr_segment *seg = qr_make_eci(999999);
 		ASSERT_EQ(seg->len, 0);
 		ASSERT_EQ(seg->count, 24);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xCF);

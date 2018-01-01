@@ -162,7 +162,7 @@ qr_make_bytes(const void *data, size_t len);
  * Returns a segment representing the given string of decimal digits encoded in numeric mode.
  */
 struct qr_segment *
-qr_make_numeric(const char *s, void *buf);
+qr_make_numeric(const char *s);
 
 /*
  * Returns a segment representing the given text string encoded in alphanumeric mode.
@@ -170,14 +170,14 @@ qr_make_numeric(const char *s, void *buf);
  * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
  */
 struct qr_segment *
-qr_make_alnum(const char *s, void *buf);
+qr_make_alnum(const char *s);
 
 /*
  * Returns a segment representing an Extended Channel Interpretation
  * (ECI) designator with the given assignment value.
  */
 struct qr_segment *
-qr_make_eci(long assignVal, void *buf);
+qr_make_eci(long assignVal);
 
 /*
  * Returns a segment of whatever mode seems to suit the string.
@@ -186,7 +186,7 @@ qr_make_eci(long assignVal, void *buf);
  * string into multiple segments. This interface is provided for caller simplicity only.
  */
 struct qr_segment *
-qr_make_any(const char *s, void *tmp);
+qr_make_any(const char *s);
 
 /*
  * Return the color of the module (pixel) at the given coordinates, which is either

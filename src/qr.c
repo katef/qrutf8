@@ -111,7 +111,6 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 	bool boost_ecl)
 {
 	struct qr_segment **a;
-	void **buf;
 	size_t i, n;
 
 	assert(q != NULL);
@@ -121,12 +120,8 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 	n = argc;
 	a = xmalloc(sizeof *a * n);
 
-	/* XXX: similar to fuzz_instance's arrays */
-	buf = xmalloc(sizeof *buf * n);
-
 	for (i = 0; i < n; i++) {
-		buf[i] = xmalloc(QR_BUF_LEN_MAX);
-		a[i] = qr_make_any(argv[i], buf[i]);
+		a[i] = qr_make_any(argv[i]);
 	}
 
 	uint8_t tmp[QR_BUF_LEN_MAX];
@@ -136,11 +131,9 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 
 	for (i = 0; i < n; i++) {
 		seg_free(a[i]);
-		free(buf[i]);
 	}
 
 	free(a);
-	free(buf);
 }
 
 int

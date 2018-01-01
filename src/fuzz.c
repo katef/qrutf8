@@ -117,7 +117,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 			fuzz_str(opaque, hook, payload, n, "0123456789");
 			assert(strlen(payload) == n);
 			assert(qr_isnumeric(payload));
-			o->a[j].seg = qr_make_numeric(payload, o->a[j].buf);
+			o->a[j].seg = qr_make_numeric(payload);
 			break;
 		}
 
@@ -134,7 +134,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 			fuzz_str(opaque, hook, payload, n, ALNUM_CHARSET);
 			assert(strlen(payload) == n);
 			assert(qr_isalnum(payload));
-			o->a[j].seg = qr_make_alnum(payload, o->a[j].buf);
+			o->a[j].seg = qr_make_alnum(payload);
 			break;
 		}
 

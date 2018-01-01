@@ -279,40 +279,42 @@ qr_make_bytes(const void *data, size_t len)
 
 	seg->mode  = QR_MODE_BYTE;
 	seg->len   = len;
-	seg->data  = data;
+	seg->data  = seg->payload;
 	seg->count = count;
 
 	return seg;
 }
 
 struct qr_segment *
-qr_make_numeric(const char *s, void *buf)
+qr_make_numeric(const char *s)
 {
 	struct qr_segment *seg;
+	void *data;
 	const char *p;
 	int count;
 	size_t len;
 	size_t rcount;
 
 	assert(s != NULL);
-	assert(buf != NULL);
-	assert(len <= QR_PAYLOAD_MAX - 1);
-
-	seg = malloc(sizeof *seg);
-	if (seg == NULL) {
-		return NULL;
-	}
 
 	len = strlen(s);
-
-	memcpy(seg->payload, s, len);
-	seg->payload[len] = '\0';
+	assert(len <= QR_PAYLOAD_MAX - 1);
 
 	count = count_seg_bits(QR_MODE_NUMERIC, len);
 	assert(count != -1);
 
+	seg = malloc(sizeof *seg + BM_LEN(count));
+	if (seg == NULL) {
+		return NULL;
+	}
+
+	data = (char *) seg + sizeof *seg;
+
+	memcpy(seg->payload, s, len);
+	seg->payload[len] = '\0';
+
 	if (count > 0) {
-		memset(buf, 0, BM_LEN(count));
+		memset(data, 0, BM_LEN(count));
 	}
 
 	rcount = 0;
@@ -325,14 +327,14 @@ qr_make_numeric(const char *s, void *buf)
 		n += (*p - '0');
 		digits++;
 		if (digits == 3) {
-			append_bits(n, 10, buf, &rcount);
+			append_bits(n, 10, data, &rcount);
 			n = 0;
 			digits = 0;
 		}
 	}
 
 	if (digits > 0) {  // 1 or 2 digits remaining
-		append_bits(n, digits * 3 + 1, buf, &rcount);
+		append_bits(n, digits * 3 + 1, data, &rcount);
 	}
 
 	assert(rcount == (size_t) count);
@@ -340,41 +342,42 @@ qr_make_numeric(const char *s, void *buf)
 
 	seg->mode  = QR_MODE_NUMERIC;
 	seg->len   = len;
-	seg->data  = buf;
+	seg->data  = data;
 	seg->count = rcount;
 
 	return seg;
 }
 
 struct qr_segment *
-qr_make_alnum(const char *s, void *buf)
+qr_make_alnum(const char *s)
 {
 	struct qr_segment *seg;
+	void *data;
 	const char *p;
 	size_t rcount;
 	size_t len;
 	int count;
 
 	assert(s != NULL);
-	assert(buf != NULL);
-
-	seg = malloc(sizeof *seg);
-	if (seg == NULL) {
-		return NULL;
-	}
 
 	len = strlen(s);
-
 	assert(len <= QR_PAYLOAD_MAX - 1);
-
-	memcpy(seg->payload, s, len);
-	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_ALNUM, len);
 	assert(count != -1);
 
+	seg = malloc(sizeof *seg + BM_LEN(count));
+	if (seg == NULL) {
+		return NULL;
+	}
+
+	data = (char *) seg + sizeof *seg;
+
+	memcpy(seg->payload, s, len);
+	seg->payload[len] = '\0';
+
 	if (count > 0) {
-		memset(buf, 0, BM_LEN(count));
+		memset(data, 0, BM_LEN(count));
 	}
 
 /* TODO: centralise with digits encoding; this is just base 45 */
@@ -387,14 +390,14 @@ qr_make_alnum(const char *s, void *buf)
 		accumData = accumData * 45 + charset_index(ALNUM_CHARSET, *p);
 		accumCount++;
 		if (accumCount == 2) {
-			append_bits(accumData, 11, buf, &rcount);
+			append_bits(accumData, 11, data, &rcount);
 			accumData  = 0;
 			accumCount = 0;
 		}
 	}
 
 	if (accumCount > 0) { // 1 character remaining
-		append_bits(accumData, 6, buf, &rcount);
+		append_bits(accumData, 6, data, &rcount);
 	}
 
 	assert(rcount == (size_t) count);
@@ -402,39 +405,40 @@ qr_make_alnum(const char *s, void *buf)
 
 	seg->mode  = QR_MODE_ALNUM;
 	seg->len   = len;
-	seg->data  = buf;
+	seg->data  = data;
 	seg->count = rcount;
 
 	return seg;
 }
 
 struct qr_segment *
-qr_make_eci(long assignVal, void *buf)
+qr_make_eci(long assignVal)
 {
 	struct qr_segment *seg;
+	void *data;
 	size_t rcount;
 
-	assert(buf != NULL);
-
-	seg = malloc(sizeof *seg);
+	seg = malloc(sizeof *seg + 3);
 	if (seg == NULL) {
 		return NULL;
 	}
 
+	data = (char *) seg + sizeof *seg;
+
 	rcount = 0;
 
 	if (0 <= assignVal && assignVal < (1 << 7)) {
-		memset(buf, 0, 1);
-		append_bits(assignVal, 8, buf, &rcount);
+		memset(data, 0, 1);
+		append_bits(assignVal, 8, data, &rcount);
 	} else if ((1 << 7) <= assignVal && assignVal < (1 << 14)) {
-		memset(buf, 0, 2);
-		append_bits(2, 2, buf, &rcount);
-		append_bits(assignVal, 14, buf, &rcount);
+		memset(data, 0, 2);
+		append_bits(2, 2, data, &rcount);
+		append_bits(assignVal, 14, data, &rcount);
 	} else if ((1 << 14) <= assignVal && assignVal < 1000000L) {
-		memset(buf, 0, 3);
-		append_bits(6, 3, buf, &rcount);
-		append_bits(assignVal >> 10, 11, buf, &rcount);
-		append_bits(assignVal & 0x3FF, 10, buf, &rcount);
+		memset(data, 0, 3);
+		append_bits(6, 3, data, &rcount);
+		append_bits(assignVal >> 10, 11, data, &rcount);
+		append_bits(assignVal & 0x3FF, 10, data, &rcount);
 	} else {
 		assert(false);
 	}
@@ -442,24 +446,23 @@ qr_make_eci(long assignVal, void *buf)
 	seg->mode       = QR_MODE_ECI;
 	seg->payload[0] = '\0';
 	seg->len        = 0;
-	seg->data       = buf;
+	seg->data       = data;
 	seg->count      = rcount;
 
 	return seg;
 }
 
 struct qr_segment *
-qr_make_any(const char *s, void *buf)
+qr_make_any(const char *s)
 {
 	struct qr_segment *seg;
 
 	assert(s != NULL);
-	assert(buf != NULL);
 
 	if (qr_isnumeric(s)) {
-		seg = qr_make_numeric(s, buf);
+		seg = qr_make_numeric(s);
 	} else if (qr_isalnum(s)) {
-		seg = qr_make_alnum(s, buf);
+		seg = qr_make_alnum(s);
 	} else {
 		seg = qr_make_bytes(s, strlen(s));
 	}
