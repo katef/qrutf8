@@ -667,7 +667,7 @@ penalty(const struct qr *q)
  * data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode(const struct qr_segment segs[], size_t len,
+qr_encode(struct qr_segment * const segs[], size_t len,
 	enum qr_ecl ecl,
 	unsigned min, unsigned max,
 	int mask,
@@ -707,11 +707,10 @@ qr_encode(const struct qr_segment segs[], size_t len,
 	memset(q->map, 0, QR_BUF_LEN(ver));
 	size_t count = 0;
 	for (size_t i = 0; i < len; i++) {
-		const struct qr_segment *seg = &segs[i];
-		append_bits(seg->mode, 4, q->map, &count);
-		append_bits(seg->len, count_char_bits(seg->mode, ver), q->map, &count);
-		for (size_t j = 0; j < seg->count; j++) {
-			append_bits((((const uint8_t *) seg->data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
+		append_bits(segs[i]->mode, 4, q->map, &count);
+		append_bits(segs[i]->len, count_char_bits(segs[i]->mode, ver), q->map, &count);
+		for (size_t j = 0; j < segs[i]->count; j++) {
+			append_bits((((const uint8_t *) segs[i]->data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
 		}
 	}
 

@@ -72,7 +72,7 @@ prop_gated(struct theft *t, void *instance)
 
 	{
 		uint8_t tmp[QR_BUF_LEN_MAX];
-		struct qr_segment *a;
+		struct qr_segment **a;
 		struct qr q;
 		size_t i;
 
@@ -211,23 +211,23 @@ free(a);
 		}
 
 		for (j = 0; j < o->o->n; j++) {
-			if (data.a[j].mode != o->o->a[j].seg.mode) {
+			if (data.a[j]->mode != o->o->a[j].seg->mode) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"sement mode mismatch: got=%u, expected=%u",
-					data.a[j].mode, o->o->a[j].seg.mode);
+					data.a[j]->mode, o->o->a[j].seg->mode);
 				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
 
-			if (data.a[j].len != o->o->a[j].seg.len) {
+			if (data.a[j]->len != o->o->a[j].seg->len) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"sement length mismatch: got=%zu, expected=%zu",
-					data.a[j].len, o->o->a[j].seg.len);
+					data.a[j]->len, o->o->a[j].seg->len);
 				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
 
-			switch (o->o->a[j].seg.mode) {
+			switch (o->o->a[j].seg->mode) {
 			case QR_MODE_NUMERIC:
 			case QR_MODE_ALNUM:
 			case QR_MODE_BYTE:
@@ -239,11 +239,11 @@ free(a);
 				break;
 			}
 
-			assert(data.a[j].payload != NULL);
+			assert(data.a[j]->payload != NULL);
 			assert(o->o->a[j].s != NULL);
 
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(data.a[j].payload, o->o->a[j].s, o->o->a[j].len)) {
+			if (0 != memcmp(data.a[j]->payload, o->o->a[j].s, o->o->a[j].len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
@@ -373,7 +373,7 @@ type_free(void *instance, void *env)
 
 	if (o->gate > GATE_DECODE) {
 		for (j = 0; j < o->data.n; j++) {
-			free(o->data.a[j].payload);
+			free(o->data.a[j]->payload);
 		}
 		free(o->data.a);
 	}
@@ -394,10 +394,12 @@ type_print(FILE *f, const void *instance, void *env)
 
 	(void) env;
 
-	fuzz_print(f, instance);
+	fprintf(stderr, "\n    gate: %d\n", o->gate);
+
+	fuzz_print(f, o->o);
 
 	if (o->gate == GATE_ENCODE) {
-		fprintf(stderr, "\nqr_encode: %s\n", strerror(o->qr_errno));
+		fprintf(stderr, "qr_encode: %s\n", strerror(o->qr_errno));
 		return;
 	}
 
@@ -426,7 +428,7 @@ type_print(FILE *f, const void *instance, void *env)
 	}
 
 	if (o->gate == GATE_NOISE) {
-		fprintf(stderr, "\nqr_noise: %s\n", o->v_err);
+		fprintf(stderr, "qr_noise: %s\n", o->v_err);
 		return;
 	}
 

@@ -110,7 +110,7 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 	enum qr_mask mask,
 	bool boost_ecl)
 {
-	struct qr_segment *a;
+	struct qr_segment **a;
 	void **buf;
 	size_t i, n;
 
@@ -135,6 +135,7 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 	}
 
 	for (i = 0; i < n; i++) {
+		seg_free(a[i]);
 		free(buf[i]);
 	}
 

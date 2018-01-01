@@ -159,6 +159,11 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 
 skip:
 
+	while (j) {
+// XXX:		seg_free(o->a[j].seg);
+		j--;
+	}
+
 	free(o);
 
 	return NULL;
@@ -167,6 +172,14 @@ skip:
 void
 fuzz_free(struct fuzz_instance *o)
 {
+	size_t j;
+
+	assert(o != NULL);
+
+	for (j = 0; j < o->n; j++) {
+		seg_free(o->a[j].seg);
+	}
+
 	free(o);
 }
 
@@ -178,11 +191,11 @@ fuzz_print(FILE *f, const struct fuzz_instance *o)
 	assert(f != NULL);
 	assert(o != NULL);
 
-	printf("    Segments {\n");
+	printf("    Segments x%zu {\n", o->n);
 	for (j = 0; j < o->n; j++) {
 		const char *dts;
 
-		switch (o->a[j].seg.mode) {
+		switch (o->a[j].seg->mode) {
 		case QR_MODE_NUMERIC: dts = "NUMERIC"; break;
 		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
 		case QR_MODE_BYTE:    dts = "BYTE";    break;
@@ -190,15 +203,15 @@ fuzz_print(FILE *f, const struct fuzz_instance *o)
 		default: dts = "?"; break;
 		}
 
-		printf("    %zu: mode=%d (%s)\n", j, o->a[j].seg.mode, dts);
+		printf("    %zu: mode=%d (%s)\n", j, o->a[j].seg->mode, dts);
 		printf("      source string: len=%zu bytes\n", o->a[j].len);
 		if (qr_isalnum(o->a[j].s) || qr_isnumeric(o->a[j].s)) {
 			printf("      \"%s\"\n", o->a[j].s);
 		} else {
 			hexdump(stdout, (void *) o->a[j].s, o->a[j].len);
 		}
-		printf("      encoded data: count=%zu bits\n", o->a[j].seg.count);
-		hexdump(stdout, o->a[j].seg.data, BM_LEN(o->a[j].seg.count));
+		printf("      encoded data: count=%zu bits\n", o->a[j].seg->count);
+		hexdump(stdout, o->a[j].seg->data, BM_LEN(o->a[j].seg->count));
 	}
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));

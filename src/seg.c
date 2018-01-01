@@ -49,7 +49,7 @@
 
 /* XXX */
 size_t
-xseg_len(const struct qr_segment *a, size_t n)
+xseg_len(struct qr_segment * const a[], size_t n)
 {
 	size_t len;
 	size_t j;
@@ -59,7 +59,7 @@ xseg_len(const struct qr_segment *a, size_t n)
 	len = 0;
 
 	for (j = 0; j < n; j++) {
-		len += a[j].len;
+		len += a[j]->len;
 	}
 
 	return len;
@@ -199,7 +199,7 @@ count_char_bits(enum qr_mode mode, unsigned ver)
  * or if the actual answer exceeds INT16_MAX.
  */
 int
-count_total_bits(const struct qr_segment segs[], size_t n, unsigned ver)
+count_total_bits(struct qr_segment * const segs[], size_t n, unsigned ver)
 {
 	int len = 0;
 
@@ -207,18 +207,18 @@ count_total_bits(const struct qr_segment segs[], size_t n, unsigned ver)
 	assert(QR_VER_MIN <= ver && ver <= QR_VER_MAX);
 
 	for (size_t i = 0; i < n; i++) {
-		assert(segs[i].len <= INT16_MAX);
-		assert(segs[i].count <= INT16_MAX);
+		assert(segs[i]->len <= INT16_MAX);
+		assert(segs[i]->count <= INT16_MAX);
 
-		int ccbits = count_char_bits(segs[i].mode, ver);
+		int ccbits = count_char_bits(segs[i]->mode, ver);
 		assert(0 <= ccbits && ccbits <= 16);
 
 		// Fail if segment length value doesn't fit in the length field's bit-width
 		/* XXX: i don't understand why this is neccessary; remove .len from the encoder? */
-		if (segs[i].len >= (1UL << ccbits))
+		if (segs[i]->len >= (1UL << ccbits))
 			return -1;
 
-		long tmp = 4L + ccbits + segs[i].count;
+		long tmp = 4L + ccbits + segs[i]->count;
 		if (tmp > INT16_MAX - len)
 			return -1;
 
@@ -256,34 +256,39 @@ qr_calcSegmentBufferSize(enum qr_mode mode, size_t len)
 	return BM_LEN((size_t) n);
 }
 
-struct qr_segment
+struct qr_segment *
 qr_make_bytes(const void *data, size_t len)
 {
-	struct qr_segment seg;
+	struct qr_segment *seg;
 	int count;
 
 	assert(data != NULL);
 	assert(len <= QR_PAYLOAD_MAX - 1);
 
+	seg = malloc(sizeof *seg);
+	if (seg == NULL) {
+		return NULL;
+	}
+
 	// XXX: mixing \0-terminated and binary data
-	memcpy(seg.payload, data, len);
-	seg.payload[len] = '\0';
+	memcpy(seg->payload, data, len);
+	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
 
-	seg.mode  = QR_MODE_BYTE;
-	seg.len   = len;
-	seg.data  = data;
-	seg.count = count;
+	seg->mode  = QR_MODE_BYTE;
+	seg->len   = len;
+	seg->data  = data;
+	seg->count = count;
 
 	return seg;
 }
 
-struct qr_segment
+struct qr_segment *
 qr_make_numeric(const char *s, void *buf)
 {
-	struct qr_segment seg;
+	struct qr_segment *seg;
 	const char *p;
 	int count;
 	size_t len;
@@ -293,10 +298,15 @@ qr_make_numeric(const char *s, void *buf)
 	assert(buf != NULL);
 	assert(len <= QR_PAYLOAD_MAX - 1);
 
+	seg = malloc(sizeof *seg);
+	if (seg == NULL) {
+		return NULL;
+	}
+
 	len = strlen(s);
 
-	memcpy(seg.payload, buf, len);
-	seg.payload[len] = '\0';
+	memcpy(seg->payload, buf, len);
+	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_NUMERIC, len);
 	assert(count != -1);
@@ -328,18 +338,18 @@ qr_make_numeric(const char *s, void *buf)
 	assert(rcount == (size_t) count);
 	/* XXX: then why memset at the start? */
 
-	seg.mode  = QR_MODE_NUMERIC;
-	seg.len   = len;
-	seg.data  = buf;
-	seg.count = rcount;
+	seg->mode  = QR_MODE_NUMERIC;
+	seg->len   = len;
+	seg->data  = buf;
+	seg->count = rcount;
 
 	return seg;
 }
 
-struct qr_segment
+struct qr_segment *
 qr_make_alnum(const char *s, void *buf)
 {
-	struct qr_segment seg;
+	struct qr_segment *seg;
 	const char *p;
 	size_t rcount;
 	size_t len;
@@ -348,12 +358,17 @@ qr_make_alnum(const char *s, void *buf)
 	assert(s != NULL);
 	assert(buf != NULL);
 
+	seg = malloc(sizeof *seg);
+	if (seg == NULL) {
+		return NULL;
+	}
+
 	len = strlen(s);
 
 	assert(len <= QR_PAYLOAD_MAX - 1);
 
-	memcpy(seg.payload, buf, len);
-	seg.payload[len] = '\0';
+	memcpy(seg->payload, buf, len);
+	seg->payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_ALNUM, len);
 	assert(count != -1);
@@ -385,21 +400,26 @@ qr_make_alnum(const char *s, void *buf)
 	assert(rcount == (size_t) count);
 	/* XXX: then why memset at the start? */
 
-	seg.mode  = QR_MODE_ALNUM;
-	seg.len   = len;
-	seg.data  = buf;
-	seg.count = rcount;
+	seg->mode  = QR_MODE_ALNUM;
+	seg->len   = len;
+	seg->data  = buf;
+	seg->count = rcount;
 
 	return seg;
 }
 
-struct qr_segment
+struct qr_segment *
 qr_make_eci(long assignVal, void *buf)
 {
-	struct qr_segment seg;
+	struct qr_segment *seg;
 	size_t rcount;
 
 	assert(buf != NULL);
+
+	seg = malloc(sizeof *seg);
+	if (seg == NULL) {
+		return NULL;
+	}
 
 	rcount = 0;
 
@@ -419,19 +439,19 @@ qr_make_eci(long assignVal, void *buf)
 		assert(false);
 	}
 
-	seg.mode       = QR_MODE_ECI;
-	seg.payload[0] = '\0';
-	seg.len        = 0;
-	seg.data       = buf;
-	seg.count      = rcount;
+	seg->mode       = QR_MODE_ECI;
+	seg->payload[0] = '\0';
+	seg->len        = 0;
+	seg->data       = buf;
+	seg->count      = rcount;
 
 	return seg;
 }
 
-struct qr_segment
+struct qr_segment *
 qr_make_any(const char *s, void *buf)
 {
-	struct qr_segment seg;
+	struct qr_segment *seg;
 
 	assert(s != NULL);
 	assert(buf != NULL);
@@ -445,6 +465,14 @@ qr_make_any(const char *s, void *buf)
 	}
 
 	return seg;
+}
+
+void
+seg_free(struct qr_segment *seg)
+{
+	assert(seg != NULL);
+
+	free(seg);
 }
 
 bool
@@ -480,18 +508,18 @@ qr_isnumeric(const char *s)
 }
 
 void
-seg_print(FILE *f, size_t n, const struct qr_segment *a)
+seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 {
 	size_t j;
 
 	assert(f != NULL);
 	assert(a != NULL);
 
-	printf("    Segments {\n");
+	printf("    Segments x%zu {\n", n);
 	for (j = 0; j < n; j++) {
 		const char *dts;
 
-		switch (a[j].mode) {
+		switch (a[j]->mode) {
 		case QR_MODE_NUMERIC: dts = "NUMERIC"; break;
 		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
 		case QR_MODE_BYTE:    dts = "BYTE";    break;
@@ -499,15 +527,15 @@ seg_print(FILE *f, size_t n, const struct qr_segment *a)
 		default: dts = "?"; break;
 		}
 
-		printf("    %zu: mode=%d (%s)\n", j, a[j].mode, dts);
-		printf("      source string: len=%zu bytes\n", a[j].len);
-		if (qr_isalnum(a[j].payload) || qr_isnumeric(a[j].payload)) {
-			printf("      \"%s\"\n", a[j].payload);
+		printf("    %zu: mode=%d (%s)\n", j, a[j]->mode, dts);
+		printf("      source string: len=%zu bytes\n", a[j]->len);
+		if (qr_isalnum(a[j]->payload) || qr_isnumeric(a[j]->payload)) {
+			printf("      \"%s\"\n", a[j]->payload);
 		} else {
-			hexdump(stdout, (void *) a[j].payload, a[j].len);
+			hexdump(stdout, (void *) a[j]->payload, a[j]->len);
 		}
-		printf("      encoded data: count=%zu bits\n", a[j].count);
-		hexdump(stdout, a[j].data, BM_LEN(a[j].count));
+		printf("      encoded data: count=%zu bits\n", a[j]->count);
+		hexdump(stdout, a[j]->data, BM_LEN(a[j]->count));
 	}
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", xseg_len(a, n));

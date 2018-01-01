@@ -113,7 +113,7 @@ struct qr_data {
 	 * For all other modes, payload is text encoded per the source.
 	 */
 	size_t n;
-	struct qr_segment *a;
+	struct qr_segment **a;
 
 	/* ECI assignment number */
 	uint32_t eci;
@@ -155,13 +155,13 @@ struct qr_segment {
 /*
  * Returns a segment representing the given binary data encoded in byte mode.
  */
-struct qr_segment
+struct qr_segment *
 qr_make_bytes(const void *data, size_t len);
 
 /*
  * Returns a segment representing the given string of decimal digits encoded in numeric mode.
  */
-struct qr_segment
+struct qr_segment *
 qr_make_numeric(const char *s, void *buf);
 
 /*
@@ -169,14 +169,14 @@ qr_make_numeric(const char *s, void *buf);
  * The characters allowed are: 0 to 9, A to Z (uppercase only), space,
  * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
  */
-struct qr_segment
+struct qr_segment *
 qr_make_alnum(const char *s, void *buf);
 
 /*
  * Returns a segment representing an Extended Channel Interpretation
  * (ECI) designator with the given assignment value.
  */
-struct qr_segment
+struct qr_segment *
 qr_make_eci(long assignVal, void *buf);
 
 /*
@@ -185,7 +185,7 @@ qr_make_eci(long assignVal, void *buf);
  * This is not neccessarily optimal; it may be more compact overall to break a
  * string into multiple segments. This interface is provided for caller simplicity only.
  */
-struct qr_segment
+struct qr_segment *
 qr_make_any(const char *s, void *tmp);
 
 /*

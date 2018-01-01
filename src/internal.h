@@ -40,7 +40,7 @@ void
 apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask);
 
 bool
-qr_encode(const struct qr_segment segs[], size_t len, enum qr_ecl ecl,
+qr_encode(struct qr_segment * const segs[], size_t len, enum qr_ecl ecl,
 	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q);
 
 quirc_decode_error_t

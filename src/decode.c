@@ -893,16 +893,22 @@ decode_payload(struct qr_data *data,
 
 		size_t i = data->n;
 
-		data->a[i].mode  = mode;
-		data->a[i].len   = 0;
-		data->a[i].data  = NULL; // TODO: populate from ds
-		data->a[i].count = 0;    // TODO: populate from ds
+		data->a[i] = malloc(sizeof *data->a[i]);
+		if (data->a[i] == NULL) {
+			free(data->a);
+			return QUIRC_ERROR_DATA_OVERFLOW; // XXX
+		}
+
+		data->a[i]->mode  = mode;
+		data->a[i]->len   = 0;
+		data->a[i]->data  = NULL; // TODO: populate from ds
+		data->a[i]->count = 0;    // TODO: populate from ds
 
 		switch (mode) {
-		case QR_MODE_NUMERIC: err = decode_numeric(data->ver, &data->a[i], ds); break;
-		case QR_MODE_ALNUM:   err = decode_alnum  (data->ver, &data->a[i], ds); break;
-		case QR_MODE_BYTE:    err = decode_byte   (data->ver, &data->a[i], ds); break;
-		case QR_MODE_KANJI:   err = decode_kanji  (data->ver, &data->a[i], ds); break;
+		case QR_MODE_NUMERIC: err = decode_numeric(data->ver, data->a[i], ds); break;
+		case QR_MODE_ALNUM:   err = decode_alnum  (data->ver, data->a[i], ds); break;
+		case QR_MODE_BYTE:    err = decode_byte   (data->ver, data->a[i], ds); break;
+		case QR_MODE_KANJI:   err = decode_kanji  (data->ver, data->a[i], ds); break;
 		case QR_MODE_ECI:     err = decode_eci    (data, ds);                   break;
 
 		default:
@@ -916,9 +922,9 @@ decode_payload(struct qr_data *data,
 
 		/* Add nul terminator to all payloads */
 		/* XXX: only for strings */
-		if (data->a[i].len >= (int) sizeof(data->a[i].payload))
-			data->a[i].len--;
-		data->a[i].payload[data->a[i].len] = '\0';
+		if (data->a[i]->len >= (int) sizeof(data->a[i]->payload))
+			data->a[i]->len--;
+		data->a[i]->payload[data->a[i]->len] = '\0';
 	}
 
 done:
