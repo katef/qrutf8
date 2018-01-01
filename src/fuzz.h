@@ -10,13 +10,9 @@ struct fuzz_hook {
 	void (*fuzz_uint)(void *opaque, unsigned *n, unsigned max);
 };
 
-struct fuzz_segment {
-	struct qr_segment *seg;
-};
-
 struct fuzz_instance {
 	size_t n;
-	struct fuzz_segment a[1000]; /* XXX: find max number of segments */
+	struct qr_segment *a[1000]; /* XXX: find max number of segments */
 	enum qr_ecl ecl;
 	unsigned min;
 	unsigned max;
@@ -24,17 +20,11 @@ struct fuzz_instance {
 	bool boost_ecl;
 };
 
-size_t
-seg_len(const struct fuzz_segment *a, size_t n);
-
 struct fuzz_instance *
 fuzz_alloc(void *opaque, const struct fuzz_hook *hook);
 
 void
 fuzz_free(struct fuzz_instance *o);
-
-void
-fuzz_print(FILE *f, const struct fuzz_instance *o);
 
 #endif
 

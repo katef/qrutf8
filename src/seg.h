@@ -3,7 +3,7 @@
 #define SEG_H
 
 size_t
-xseg_len(struct qr_segment * const a[], size_t n);
+seg_len(struct qr_segment * const a[], size_t n);
 
 int
 count_char_bits(enum qr_mode mode, unsigned ver);

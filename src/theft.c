@@ -72,19 +72,11 @@ prop_gated(struct theft *t, void *instance)
 
 	{
 		uint8_t tmp[QR_BUF_LEN_MAX];
-		struct qr_segment **a;
 		struct qr q;
-		size_t i;
-
-		a = xmalloc(sizeof *a * o->o->n);
-		for (i = 0; i < o->o->n; i++) {
-			a[i] = o->o->a[i].seg;
-		}
 
 		q.map = o->map;
 
-		if (!qr_encode(a, o->o->n, o->o->ecl, o->o->min, o->o->max, o->o->mask, o->o->boost_ecl, tmp, &q)) {
-free(a);
+		if (!qr_encode(o->o->a, o->o->n, o->o->ecl, o->o->min, o->o->max, o->o->mask, o->o->boost_ecl, tmp, &q)) {
 			if (errno == EMSGSIZE) {
 				return THEFT_TRIAL_SKIP;
 			}
@@ -93,8 +85,6 @@ free(a);
 			o->gate = GATE_ENCODE;
 			return THEFT_TRIAL_ERROR;
 		}
-
-free(a);
 
 		o->q = q;
 	}
@@ -202,32 +192,32 @@ free(a);
 			return THEFT_TRIAL_FAIL;
 		}
 
-		if (xseg_len(data.a, data.n) != seg_len(o->o->a, o->o->n)) {
+		if (seg_len(data.a, data.n) != seg_len(o->o->a, o->o->n)) {
 			snprintf(o->v_err, sizeof o->v_err,
 				"payload length mismatch: got=%zu, expected=%zu",
-				xseg_len(data.a, data.n), seg_len(o->o->a, o->o->n));
+				seg_len(data.a, data.n), seg_len(o->o->a, o->o->n));
 			o->gate = GATE_PAYLOAD;
 			return THEFT_TRIAL_FAIL;
 		}
 
 		for (j = 0; j < o->o->n; j++) {
-			if (data.a[j]->mode != o->o->a[j].seg->mode) {
+			if (data.a[j]->mode != o->o->a[j]->mode) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"sement mode mismatch: got=%u, expected=%u",
-					data.a[j]->mode, o->o->a[j].seg->mode);
+					data.a[j]->mode, o->o->a[j]->mode);
 				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
 
-			if (data.a[j]->len != o->o->a[j].seg->len) {
+			if (data.a[j]->len != o->o->a[j]->len) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"sement length mismatch: got=%zu, expected=%zu",
-					data.a[j]->len, o->o->a[j].seg->len);
+					data.a[j]->len, o->o->a[j]->len);
 				o->gate = GATE_PAYLOAD;
 				return THEFT_TRIAL_FAIL;
 			}
 
-			switch (o->o->a[j].seg->mode) {
+			switch (o->o->a[j]->mode) {
 			case QR_MODE_NUMERIC:
 			case QR_MODE_ALNUM:
 			case QR_MODE_BYTE:
@@ -240,10 +230,10 @@ free(a);
 			}
 
 			assert(data.a[j]->payload != NULL);
-			assert(o->o->a[j].seg->payload != NULL);
+			assert(o->o->a[j]->payload != NULL);
 
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(data.a[j]->payload, o->o->a[j].seg->payload, o->o->a[j].seg->len)) {
+			if (0 != memcmp(data.a[j]->payload, o->o->a[j]->payload, o->o->a[j]->len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
@@ -396,7 +386,7 @@ type_print(FILE *f, const void *instance, void *env)
 
 	fprintf(stderr, "\n    gate: %d\n", o->gate);
 
-	fuzz_print(f, o->o);
+	seg_print(f, o->o->n, o->o->a);
 
 	if (o->gate == GATE_ENCODE) {
 		fprintf(stderr, "qr_encode: %s\n", strerror(o->qr_errno));

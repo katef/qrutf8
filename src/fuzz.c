@@ -58,23 +58,6 @@ fuzz_bytes(void *opaque, const struct fuzz_hook *hook,
 	/* TODO: permutate string */
 }
 
-size_t
-seg_len(const struct fuzz_segment *a, size_t n)
-{
-	size_t len;
-	size_t j;
-
-	assert(a != NULL);
-
-	len = 0;
-
-	for (j = 0; j < n; j++) {
-		len += a[j].seg->len;
-	}
-
-	return len;
-}
-
 struct fuzz_instance *
 fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 {
@@ -117,7 +100,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 			fuzz_str(opaque, hook, payload, n, "0123456789");
 			assert(strlen(payload) == n);
 			assert(qr_isnumeric(payload));
-			o->a[j].seg = qr_make_numeric(payload);
+			o->a[j] = qr_make_numeric(payload);
 			break;
 		}
 
@@ -134,7 +117,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 			fuzz_str(opaque, hook, payload, n, ALNUM_CHARSET);
 			assert(strlen(payload) == n);
 			assert(qr_isalnum(payload));
-			o->a[j].seg = qr_make_alnum(payload);
+			o->a[j] = qr_make_alnum(payload);
 			break;
 		}
 
@@ -149,7 +132,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 			}
 
 			fuzz_bytes(opaque, hook, payload, n);
-			o->a[j].seg = qr_make_bytes(payload, n);
+			o->a[j] = qr_make_bytes(payload, n);
 			break;
 		}
 
@@ -171,7 +154,7 @@ fuzz_alloc(void *opaque, const struct fuzz_hook *hook)
 skip:
 
 	while (j) {
-// XXX:		seg_free(o->a[j].seg);
+// XXX:		seg_free(o->a[j]);
 		j--;
 	}
 
@@ -188,43 +171,9 @@ fuzz_free(struct fuzz_instance *o)
 	assert(o != NULL);
 
 	for (j = 0; j < o->n; j++) {
-		seg_free(o->a[j].seg);
+		seg_free(o->a[j]);
 	}
 
 	free(o);
-}
-
-void
-fuzz_print(FILE *f, const struct fuzz_instance *o)
-{
-	size_t j;
-
-	assert(f != NULL);
-	assert(o != NULL);
-
-	printf("    Segments x%zu {\n", o->n);
-	for (j = 0; j < o->n; j++) {
-		const char *dts;
-
-		switch (o->a[j].seg->mode) {
-		case QR_MODE_NUMERIC: dts = "NUMERIC"; break;
-		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
-		case QR_MODE_BYTE:    dts = "BYTE";    break;
-		case QR_MODE_KANJI:   dts = "KANJI";   break;
-		default: dts = "?"; break;
-		}
-
-		printf("    %zu: mode=%d (%s)\n", j, o->a[j].seg->mode, dts);
-		printf("      source string: len=%zu bytes\n", o->a[j].seg->len);
-		if (qr_isalnum(o->a[j].seg->payload) || qr_isnumeric(o->a[j].seg->payload)) {
-			printf("      \"%s\"\n", o->a[j].seg->payload);
-		} else {
-			hexdump(stdout, (void *) o->a[j].seg->payload, o->a[j].seg->len);
-		}
-		printf("      encoded data: count=%zu bits\n", o->a[j].seg->count);
-		hexdump(stdout, o->a[j].seg->data, BM_LEN(o->a[j].seg->count));
-	}
-	printf("    }\n");
-	printf("    Segments total data length: %zu\n", seg_len(o->a, o->n));
 }
 

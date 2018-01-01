@@ -47,9 +47,8 @@
 #include "util.h"
 #include "seg.h"
 
-/* XXX */
 size_t
-xseg_len(struct qr_segment * const a[], size_t n)
+seg_len(struct qr_segment * const a[], size_t n)
 {
 	size_t len;
 	size_t j;
@@ -541,6 +540,6 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 		hexdump(stdout, a[j]->data, BM_LEN(a[j]->count));
 	}
 	printf("    }\n");
-	printf("    Segments total data length: %zu\n", xseg_len(a, n));
+	printf("    Segments total data length: %zu\n", seg_len(a, n));
 }
 
