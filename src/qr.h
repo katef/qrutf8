@@ -105,9 +105,6 @@ struct qr_data {
 	unsigned ecc_level; /* TODO: enum */
 	enum qr_mask mask;
 
-	unsigned format_corrections;
-	unsigned codeword_corrections;
-
 	/*
 	 * Data payload. For the Kanji mode, payload is encoded as Shift-JIS.
 	 * For all other modes, payload is text encoded per the source.
@@ -117,6 +114,11 @@ struct qr_data {
 
 	/* ECI assignment number */
 	uint32_t eci;
+};
+
+struct qr_stats {
+	unsigned format_corrections;
+	unsigned codeword_corrections;
 };
 
 /*

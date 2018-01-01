@@ -269,9 +269,10 @@ main(int argc, char * const argv[])
 
 	if (decode) {
 		struct qr_data data;
+		struct qr_stats stats;
 		quirc_decode_error_t e;
 
-		e = quirc_decode(&q, &data);
+		e = quirc_decode(&q, &data, &stats);
 
 		if (e) {
 			printf("  Decoding FAILED: %s\n", quirc_strerror(e));
@@ -287,8 +288,8 @@ main(int argc, char * const argv[])
 			}
 
 			printf("    Noise: %u\n", noise);
-			printf("    Format corrections: %u\n", data.format_corrections);
-			printf("    Codeword corrections: %u\n", data.codeword_corrections);
+			printf("    Format corrections: %u\n", stats.format_corrections);
+			printf("    Codeword corrections: %u\n", stats.codeword_corrections);
 			seg_print(stdout, data.n, data.a);
 		}
 

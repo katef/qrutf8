@@ -444,7 +444,7 @@ struct datastream {
 
 static quirc_decode_error_t
 read_format(const struct qr *q,
-	struct qr_data *data, int which)
+	struct qr_data *data, struct qr_stats *stats, int which)
 {
 	int i;
 	uint16_t format = 0;
@@ -472,7 +472,7 @@ read_format(const struct qr *q,
 
 	format ^= 0x5412;
 
-	err = correct_format(&format, &data->format_corrections);
+	err = correct_format(&format, &stats->format_corrections);
 	if (err)
 		return err;
 
@@ -589,7 +589,7 @@ read_data(const struct qr *q,
 }
 
 static quirc_decode_error_t
-codestream_ecc(struct qr_data *data,
+codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	struct datastream *ds)
 {
 	enum qr_ecl ecl;
@@ -639,7 +639,7 @@ codestream_ecc(struct qr_data *data,
 		for (j = 0; j < num_ec; j++)
 			dst[ecc->dw + j] = ds->raw[ecc_offset + j * bc + i];
 
-		err = correct_block(dst, ecc->bs, ecc->dw, &data->codeword_corrections);
+		err = correct_block(dst, ecc->bs, ecc->dw, &stats->codeword_corrections);
 		if (err)
 			return err;
 
@@ -934,7 +934,7 @@ done:
 
 quirc_decode_error_t
 quirc_decode(const struct qr *q,
-	struct qr_data *data)
+	struct qr_data *data, struct qr_stats *stats)
 {
 	quirc_decode_error_t err;
 	struct datastream ds;
@@ -951,14 +951,14 @@ quirc_decode(const struct qr *q,
 		return QUIRC_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
-	err = read_format(q, data, 0);
+	err = read_format(q, data, stats, 0);
 	if (err)
-		err = read_format(q, data, 1);
+		err = read_format(q, data, stats, 1);
 	if (err)
 		return err;
 
 	read_data(q, data, &ds);
-	err = codestream_ecc(data, &ds);
+	err = codestream_ecc(data, stats, &ds);
 	if (err)
 		return err;
 

@@ -45,7 +45,7 @@ qr_encode(struct qr_segment * const segs[], size_t len, enum qr_ecl ecl,
 
 quirc_decode_error_t
 quirc_decode(const struct qr *q,
-	struct qr_data *data);
+	struct qr_data *data, struct qr_stats *stats);
 
 #endif
 

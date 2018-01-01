@@ -49,6 +49,7 @@ struct type_instance {
 
 	/* decoded */
 	struct qr_data data;
+	struct qr_stats stats;
 	quirc_decode_error_t quirc_err;
 
 	/* verified */
@@ -60,6 +61,7 @@ prop_gated(struct theft *t, void *instance)
 {
 	struct type_instance *o = instance;
 	struct qr_data data;
+	struct qr_stats stats;
 
 	assert(t != NULL);
 	assert(instance != NULL);
@@ -112,7 +114,7 @@ prop_gated(struct theft *t, void *instance)
 	{
 		quirc_decode_error_t e;
 
-		e = quirc_decode(&o->q, &data);
+		e = quirc_decode(&o->q, &data, &stats);
 
 		if ((g & GATE_NOISE) != 0) {
 			if (o->codeword_noise > 0 && e == QUIRC_ERROR_DATA_ECC) {
@@ -126,15 +128,16 @@ prop_gated(struct theft *t, void *instance)
 			return THEFT_TRIAL_FAIL;
 		}
 
-		o->data = data;
+		o->data  = data;
+		o->stats = stats;
 	}
 
 	/* because we skip reserved areas, a flipped bit should always
 	 * result in an ecc correction */
 	if ((g & GATE_NOISE) != 0) {
 		if (o->codeword_noise > 0 && seg_len(o->o->a, o->o->n) > 0) {
-			if (o->data.codeword_corrections == 0) {
-// XXX: not format_corrections && o->data.format_corrections == 0) {
+			if (o->stats.codeword_corrections == 0) {
+// XXX: not format_corrections && o->stats.format_corrections == 0) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"no corrections: noise=%d",
 					o->codeword_noise);
@@ -413,8 +416,8 @@ type_print(FILE *f, const void *instance, void *env)
 
 	{
 		printf("	Noise: %u\n", o->codeword_noise);
-		printf("	Format corrections: %u\n", o->data.format_corrections);
-		printf("	Codeword corrections: %u\n", o->data.codeword_corrections);
+		printf("	Format corrections: %u\n", o->stats.format_corrections);
+		printf("	Codeword corrections: %u\n", o->stats.codeword_corrections);
 	}
 
 	if (o->gate == GATE_NOISE) {
