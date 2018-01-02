@@ -106,6 +106,7 @@ encode_file(struct qr *q, const char *filename)
 
 static void
 encode_argv(struct qr *q, int argc, char * const argv[],
+	enum eci eci,
 	enum qr_ecl ecl,
 	unsigned min, unsigned max,
 	enum qr_mask mask,
@@ -121,7 +122,13 @@ encode_argv(struct qr *q, int argc, char * const argv[],
 	n = argc;
 	a = xmalloc(sizeof *a * n);
 
+	/* TODO: add ECI_AUTO option, to find whatever best suits this segment */
+	/* TODO: override eci by getopt */
+	(void) eci;
+
 	for (i = 0; i < n; i++) {
+		/* TODO: iconv from terminal encoding to eci, per segment */
+
 		a[i] = qr_make_any(argv[i]);
 	}
 
@@ -142,6 +149,7 @@ main(int argc, char * const argv[])
 {
 	enum qr_mask mask;
 	enum qr_ecl ecl;
+	enum eci eci;
 	unsigned min, max;
 	bool boost_ecl;
 	bool decode;
@@ -156,6 +164,7 @@ main(int argc, char * const argv[])
 	max  = QR_VER_MAX;
 	mask = QR_MASK_AUTO;
 	ecl  = QR_ECL_LOW;
+	eci  = ECI_DEFAULT;
 	boost_ecl = true;
 	decode = false;
 	invert = true;
@@ -256,6 +265,7 @@ main(int argc, char * const argv[])
 		encode_file(&q, filename);
 	} else {
 		encode_argv(&q, argc, argv,
+			eci,
 			ecl, min, max, mask, boost_ecl);
 	}
 

@@ -704,6 +704,21 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 		}
 	}
 
+	/*
+	 * QR 2005 6.4.8.1 FNC1 in first position
+	 * "... shall only be used once in a symbol ..."
+	 * "... shall be placed immediately before the first mode indicator used
+	 * for efficient data encoding (Numeric, Alphanumeric, Byte or Kanji),
+	 * and after any ECI or Structured Append header."
+	 *
+	 * FNC2 is the same, except followed by a byte defined with some external
+	 * meaning registered with AIM.
+	 */
+	/*
+	 * TODO: implement as state kept when iterating over segments below,
+	 * and emit these at the appropriate point.
+	 */
+
 	// Create the data bit string by concatenating all segments
 	size_t dataCapacityBits = count_codewords(ver, ecl) * 8;
 	memset(q->map, 0, QR_BUF_LEN(ver));
@@ -716,14 +731,25 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 		}
 	}
 
-	// Add terminator and pad up to a byte if applicable
+	/*
+	 * QR 2005 6.4.9 Terminator "The end of data in the symbol is signalled
+	 * by the Terminator sequence of 0 bits, ... following the final mode segment.
+	 * ... shall be omitted if the data bit stream completely fills the capacity
+	 * of the symbol, or abbreviated if the remaining capacity of the symbol is
+	 * less than 4 bits."
+	 */
+	// pad up to a byte if applicable
 	int terminatorBits = dataCapacityBits - count;
 	if (terminatorBits > 4)
 		terminatorBits = 4;
 	append_bits(0, terminatorBits, q->map, &count);
 	append_bits(0, (8 - count % 8) % 8, q->map, &count);
 
-	// Pad with alternate bytes until data capacity is reached
+	/*
+	 * QR 2005 6.4.10 "The message bit stream shall then be extended to fill
+	 * the data capacity ... by adding the Pad Codewords 11101100 and 00010001
+	 * alternately."
+	 */
 	for (uint8_t padByte = 0xEC; count < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
 		append_bits(padByte, 8, q->map, &count);
 	assert(count % 8 == 0);
@@ -738,7 +764,7 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 	draw_init(ver, &qtmp);
 
 	// Handle masking
-	if (mask == QR_MASK_AUTO) {  // Automatically choose best mask
+	if (mask == QR_MASK_AUTO) {
 		long curr = LONG_MAX;
 		for (int i = 0; i < 8; i++) {
 			draw_format(ecl, i, q);

@@ -518,6 +518,8 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 	assert(f != NULL);
 	assert(a != NULL);
 
+	enum eci eci = ECI_DEFAULT;
+
 	printf("    Segments x%zu {\n", n);
 	for (j = 0; j < n; j++) {
 		const char *dts;
@@ -538,6 +540,9 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 		case QR_MODE_ALNUM:
 		case QR_MODE_BYTE:
 		case QR_MODE_KANJI:
+			/* TODO: iconv here, per eci */
+			(void) eci;
+
 			printf("      source string: len=%zu bytes\n", a[j]->len);
 			if (qr_isalnum(a[j]->u.payload) || qr_isnumeric(a[j]->u.payload)) {
 				printf("      \"%s\"\n", a[j]->u.payload);
@@ -548,6 +553,7 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 
 		case QR_MODE_ECI:
 			printf("      eci: %u\n", a[j]->u.eci);
+			eci = a[j]->u.eci;
 			break;
 
 		default:
