@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "internal.h"

@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include <eci.h>
 #include <qr.h>
 #include <io.h>
 

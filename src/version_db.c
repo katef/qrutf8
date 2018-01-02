@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "internal.h"

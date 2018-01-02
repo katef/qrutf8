@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "internal.h"

@@ -51,6 +51,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "xalloc.h"
@@ -1019,7 +1020,7 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_BYTE, "", 3, NULL, 24 },
+			& (struct qr_segment) { QR_MODE_BYTE, { "" }, 3, NULL, 24 },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 2), 36);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 10), 44);
@@ -1027,10 +1028,10 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_ECI,     "", 0, NULL, 8 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 7, NULL, 24 },
-			& (struct qr_segment) { QR_MODE_ALNUM,   "", 1, NULL, 6 },
-			& (struct qr_segment) { QR_MODE_KANJI,   "", 4, NULL, 52 },
+			& (struct qr_segment) { QR_MODE_ECI,     .u.eci = ECI_DEFAULT, 0, NULL, 8 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 7, NULL, 24 },
+			& (struct qr_segment) { QR_MODE_ALNUM,   { "" }, 1, NULL, 6 },
+			& (struct qr_segment) { QR_MODE_KANJI,   { "" }, 4, NULL, 52 },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 9), 133);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 21), 139);
@@ -1038,7 +1039,7 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_BYTE, "", 4093, NULL, 32744 },
+			& (struct qr_segment) { QR_MODE_BYTE, { "" }, 4093, NULL, 32744 },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 1), -1);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 10), 32764);
@@ -1046,11 +1047,11 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 2047, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 2047, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 2047, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 2047, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, "", 1617, NULL, 5390 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 2047, NULL, 6824 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 2047, NULL, 6824 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 2047, NULL, 6824 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 2047, NULL, 6824 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { "" }, 1617, NULL, 5390 },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 1), -1);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 10), 32766);
@@ -1058,16 +1059,16 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, "", 255, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_ALNUM, "", 511, NULL, 2811 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_KANJI, { "" }, 255, NULL, 3315 },
+			& (struct qr_segment) { QR_MODE_ALNUM, { "" }, 511, NULL, 2811 },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 9), 32767);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 26), -1);

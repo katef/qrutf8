@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <time.h>
 
+#include <eci.h>
 #include <qr.h>
 #include <io.h>
 
@@ -231,11 +232,11 @@ prop_gated(struct theft *t, void *instance)
 				break;
 			}
 
-			assert(data.a[j]->payload != NULL);
-			assert(o->o->a[j]->payload != NULL);
+			assert(data.a[j]->u.payload != NULL);
+			assert(o->o->a[j]->u.payload != NULL);
 
 			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(data.a[j]->payload, o->o->a[j]->payload, o->o->a[j]->len)) {
+			if (0 != memcmp(data.a[j]->u.payload, o->o->a[j]->u.payload, o->o->a[j]->len)) {
 				snprintf(o->v_err, sizeof o->v_err,
 					"payload data mismatch for segment %zu", j);
 				o->gate = GATE_PAYLOAD;
@@ -365,7 +366,17 @@ type_free(void *instance, void *env)
 
 	if (o->gate > GATE_DECODE) {
 		for (j = 0; j < o->data.n; j++) {
-			free(o->data.a[j]->payload);
+			switch (o->data.a[j]->mode) {
+			case QR_MODE_ALNUM:
+			case QR_MODE_BYTE:
+			case QR_MODE_KANJI:
+				free(o->data.a[j]->u.payload);
+				break;
+
+			case QR_MODE_ECI:
+			default:
+				break;
+			}
 		}
 		free(o->data.a);
 	}
@@ -407,10 +418,6 @@ type_print(FILE *f, const void *instance, void *env)
 		printf("	Version: %u\n", o->data.ver);
 		printf("	ECC level: %c\n", "MLHQ"[o->data.ecl]);
 		printf("	Mask: %d\n", o->data.mask);
-
-		if (o->data.eci) {
-			printf("	ECI: %d\n", o->data.eci);
-		}
 	}
 
 	{

@@ -41,6 +41,7 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "internal.h"
@@ -270,15 +271,15 @@ qr_make_bytes(const void *data, size_t len)
 	}
 
 	// XXX: mixing \0-terminated and binary data
-	memcpy(seg->payload, data, len);
-	seg->payload[len] = '\0';
+	memcpy(seg->u.payload, data, len);
+	seg->u.payload[len] = '\0';
 
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
 
 	seg->mode  = QR_MODE_BYTE;
 	seg->len   = len;
-	seg->data  = seg->payload;
+	seg->data  = seg->u.payload;
 	seg->count = count;
 
 	return seg;
@@ -309,8 +310,8 @@ qr_make_numeric(const char *s)
 
 	data = (char *) seg + sizeof *seg;
 
-	memcpy(seg->payload, s, len);
-	seg->payload[len] = '\0';
+	memcpy(seg->u.payload, s, len);
+	seg->u.payload[len] = '\0';
 
 	if (count > 0) {
 		memset(data, 0, BM_LEN(count));
@@ -372,8 +373,8 @@ qr_make_alnum(const char *s)
 
 	data = (char *) seg + sizeof *seg;
 
-	memcpy(seg->payload, s, len);
-	seg->payload[len] = '\0';
+	memcpy(seg->u.payload, s, len);
+	seg->u.payload[len] = '\0';
 
 	if (count > 0) {
 		memset(data, 0, BM_LEN(count));
@@ -442,11 +443,11 @@ qr_make_eci(long assignVal)
 		assert(false);
 	}
 
-	seg->mode       = QR_MODE_ECI;
-	seg->payload[0] = '\0';
-	seg->len        = 0;
-	seg->data       = data;
-	seg->count      = rcount;
+	seg->mode  = QR_MODE_ECI;
+	seg->u.eci = (enum eci) assignVal;
+	seg->len   = 0;
+	seg->data  = data;
+	seg->count = rcount;
 
 	return seg;
 }
@@ -526,16 +527,33 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 		case QR_MODE_ALNUM:   dts = "ALNUM";   break;
 		case QR_MODE_BYTE:    dts = "BYTE";    break;
 		case QR_MODE_KANJI:   dts = "KANJI";   break;
+		case QR_MODE_ECI:     dts = "ECI";     break;
 		default: dts = "?"; break;
 		}
 
 		printf("    %zu: mode=%d (%s)\n", j, a[j]->mode, dts);
-		printf("      source string: len=%zu bytes\n", a[j]->len);
-		if (qr_isalnum(a[j]->payload) || qr_isnumeric(a[j]->payload)) {
-			printf("      \"%s\"\n", a[j]->payload);
-		} else {
-			hexdump(stdout, (void *) a[j]->payload, a[j]->len);
+
+		switch (a[j]->mode) {
+		case QR_MODE_NUMERIC:
+		case QR_MODE_ALNUM:
+		case QR_MODE_BYTE:
+		case QR_MODE_KANJI:
+			printf("      source string: len=%zu bytes\n", a[j]->len);
+			if (qr_isalnum(a[j]->u.payload) || qr_isnumeric(a[j]->u.payload)) {
+				printf("      \"%s\"\n", a[j]->u.payload);
+			} else {
+				hexdump(stdout, (void *) a[j]->u.payload, a[j]->len);
+			}
+			break;
+
+		case QR_MODE_ECI:
+			printf("      eci: %u\n", a[j]->u.eci);
+			break;
+
+		default:
+			break;
 		}
+
 		printf("      encoded data: count=%zu bits\n", a[j]->count);
 		hexdump(stdout, a[j]->data, BM_LEN(a[j]->count));
 	}

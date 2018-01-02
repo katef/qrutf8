@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include <eci.h>
 #include <qr.h>
 
 #include "internal.h"

@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <eci.h>
 #include <qr.h>
 #include <io.h>
 
@@ -282,10 +283,6 @@ main(int argc, char * const argv[])
 			printf("    Version: %d\n", data.ver);
 			printf("    ECC level: %c\n", "MLHQ"[(int) data.ecl]);
 			printf("    Mask: %d\n", data.mask);
-
-			if (data.eci) {
-				printf("    ECI: %d\n", data.eci);
-			}
 
 			printf("    Noise: %u\n", noise);
 			printf("    Format corrections: %u\n", stats.format_corrections);

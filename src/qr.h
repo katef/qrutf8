@@ -81,6 +81,8 @@ struct qr {
 /*
  * The mode field of a segment.
  */
+/* TODO: FNC1 mode */
+/* TODO: Structured Append mode */
 enum qr_mode {
 	QR_MODE_NUMERIC = 0x1,
 	QR_MODE_ALNUM   = 0x2,
@@ -110,9 +112,6 @@ struct qr_data {
 	 */
 	size_t n;
 	struct qr_segment **a;
-
-	/* ECI assignment number */
-	uint32_t eci;
 };
 
 struct qr_stats {
@@ -126,7 +125,10 @@ struct qr_stats {
 struct qr_segment {
 	enum qr_mode mode;
 
-	char payload[QR_PAYLOAD_MAX]; // TODO
+	union {
+		char payload[QR_PAYLOAD_MAX]; // TODO
+		enum eci eci;
+	} u;
 
 	/*
 	 * The length of this segment's unencoded data.
