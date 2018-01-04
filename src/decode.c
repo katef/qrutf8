@@ -670,7 +670,7 @@ take_bits(struct datastream *ds, int len)
 }
 
 static int
-tuple(char *payload, size_t *len,
+tuple(char *payload,
 	struct datastream *ds,
 	int bits, int digits,
 	const char *charset)
@@ -680,7 +680,6 @@ tuple(char *payload, size_t *len,
 	size_t n;
 
 	assert(payload != NULL);
-	assert(len != NULL);
 	assert(charset != NULL);
 
 	n = strlen(charset);
@@ -691,11 +690,9 @@ tuple(char *payload, size_t *len,
 	tuple = take_bits(ds, bits);
 
 	for (i = 0; i < digits; i++) {
-		payload[*len + digits - i - 1] = charset[tuple % n];
+		payload[digits - i - 1] = charset[tuple % n];
 		tuple /= n;
 	}
-
-	*len += digits;
 
 	return 0;
 }
@@ -720,20 +717,23 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 3) {
-		if (tuple(seg->u.payload, &seg->len, ds, 10, 3, numeric_map) < 0)
+		if (tuple(seg->u.payload + seg->len, ds, 10, 3, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
+		seg->len += 3;
 		count -= 3;
 	}
 
 	if (count >= 2) {
-		if (tuple(seg->u.payload, &seg->len, ds, 7, 2, numeric_map) < 0)
+		if (tuple(seg->u.payload + seg->len, ds, 7, 2, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
+		seg->len += 2;
 		count -= 2;
 	}
 
 	if (count) {
-		if (tuple(seg->u.payload, &seg->len, ds, 4, 1, numeric_map) < 0)
+		if (tuple(seg->u.payload + seg->len, ds, 4, 1, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
+		seg->len += 1;
 		count--;
 	}
 
@@ -762,14 +762,16 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
 	while (count >= 2) {
-		if (tuple(seg->u.payload, &seg->len, ds, 11, 2, alpha_map) < 0)
+		if (tuple(seg->u.payload + seg->len, ds, 11, 2, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
+		seg->len += 2;
 		count -= 2;
 	}
 
 	if (count) {
-		if (tuple(seg->u.payload, &seg->len, ds, 6, 1, alpha_map) < 0)
+		if (tuple(seg->u.payload + seg->len, ds, 6, 1, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
+		seg->len += 1;
 		count--;
 	}
 
