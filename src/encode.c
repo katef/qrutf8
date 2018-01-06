@@ -654,21 +654,19 @@ penalty(const struct qr *q)
  * - If successful, the resulting QR Code will use byte mode to encode the data.
  * - In the most optimistic case, a QR Code at version 40 with low ECL can hold any byte
  *   sequence up to length 2953. This is the hard upper limit of the QR Code standard.
- * - Please consult the QR Code specification for information on
- *   data capacities per version, ECL level, and text encoding mode.
  *
  * Please consult the QR Code specification for information on
  * data capacities per version, ECL level, and text encoding mode.
  */
 bool
-qr_encode(struct qr_segment * const segs[], size_t len,
+qr_encode(struct qr_segment * const a[], size_t n,
 	enum qr_ecl ecl,
 	unsigned min, unsigned max,
 	int mask,
 	bool boost_ecl,
 	void *tmp, struct qr *q)
 {
-	assert(segs != NULL || len == 0);
+	assert(a != NULL || n == 0);
 	assert(QR_VER_MIN <= min && min <= max && max <= QR_VER_MAX);
 	assert(0 <= ecl && ecl <= 3);
 	assert(-1 <= mask && mask <= 7);
@@ -678,7 +676,7 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 	int dataUsedBits;
 	for (ver = min; ; ver++) {
 		int dataCapacityBits = count_codewords(ver, ecl) * 8;  // Number of data bits available
-		dataUsedBits = count_total_bits(segs, len, ver);
+		dataUsedBits = count_total_bits(a, n, ver);
 		if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits)
 			break;  // This version number is found to be suitable
 		if (ver >= max) {  // All versions in the range could not fit the given data
@@ -723,11 +721,33 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 	size_t dataCapacityBits = count_codewords(ver, ecl) * 8;
 	memset(q->map, 0, QR_BUF_LEN(ver));
 	size_t count = 0;
-	for (size_t i = 0; i < len; i++) {
-		append_bits(segs[i]->mode, 4, q->map, &count);
-		append_bits(segs[i]->len, count_char_bits(segs[i]->mode, ver), q->map, &count);
-		for (size_t j = 0; j < segs[i]->count; j++) {
-			append_bits((((const uint8_t *) segs[i]->data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
+	for (size_t i = 0; i < n; i++) {
+		size_t len;
+
+		switch (a[i]->mode) {
+		case QR_MODE_BYTE:
+			len = a[i]->u.m.len;
+			break;
+
+		case QR_MODE_NUMERIC:
+		case QR_MODE_ALNUM:
+		case QR_MODE_KANJI:
+			len = strlen(a[i]->u.s);
+			break;
+
+		case QR_MODE_ECI:
+			len = 0;
+			return 0;
+
+		default:
+			assert(false);
+		}
+
+		append_bits(a[i]->mode, 4, q->map, &count);
+		append_bits(len, count_char_bits(a[i]->mode, ver), q->map, &count);
+
+		for (size_t j = 0; j < a[i]->count; j++) {
+			append_bits((((const uint8_t *) a[i]->data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
 		}
 	}
 
@@ -769,10 +789,10 @@ qr_encode(struct qr_segment * const segs[], size_t len,
 		for (int i = 0; i < 8; i++) {
 			draw_format(ecl, i, q);
 			apply_mask(qtmp.map, q, i);
-			long n = penalty(q);
-			if (n < curr) {
+			long w = penalty(q);
+			if (w < curr) {
 				mask = i;
-				curr = n;
+				curr = w;
 			}
 			apply_mask(qtmp.map, q, i);  // Undoes the mask due to XOR
 		}

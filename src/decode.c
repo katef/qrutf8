@@ -670,7 +670,7 @@ take_bits(struct datastream *ds, int len)
 }
 
 static int
-tuple(char *payload,
+tuple(char *s,
 	struct datastream *ds,
 	int bits, int digits,
 	const char *charset)
@@ -679,7 +679,7 @@ tuple(char *payload,
 	int i;
 	size_t n;
 
-	assert(payload != NULL);
+	assert(s != NULL);
 	assert(charset != NULL);
 
 	n = strlen(charset);
@@ -690,7 +690,7 @@ tuple(char *payload,
 	tuple = take_bits(ds, bits);
 
 	for (i = 0; i < digits; i++) {
-		payload[digits - i - 1] = charset[tuple % n];
+		s[digits - i - 1] = charset[tuple % n];
 		tuple /= n;
 	}
 
@@ -706,6 +706,7 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 
 	int bits = 14;
 	int count;
+	size_t len;
 
 	if (ver < 10)
 		bits = 10;
@@ -713,29 +714,33 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 		bits = 12;
 
 	count = take_bits(ds, bits);
-	if (seg->len + count + 1 > QR_PAYLOAD_MAX)
+	if ((size_t) count > sizeof seg->u.s - 1)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
+	len = 0;
+
 	while (count >= 3) {
-		if (tuple(seg->u.payload + seg->len, ds, 10, 3, numeric_map) < 0)
+		if (tuple(seg->u.s + len, ds, 10, 3, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
-		seg->len += 3;
+		len += 3;
 		count -= 3;
 	}
 
 	if (count >= 2) {
-		if (tuple(seg->u.payload + seg->len, ds, 7, 2, numeric_map) < 0)
+		if (tuple(seg->u.s + len, ds, 7, 2, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
-		seg->len += 2;
+		len += 2;
 		count -= 2;
 	}
 
 	if (count) {
-		if (tuple(seg->u.payload + seg->len, ds, 4, 1, numeric_map) < 0)
+		if (tuple(seg->u.s + len, ds, 4, 1, numeric_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
-		seg->len += 1;
+		len += 1;
 		count--;
 	}
+
+	seg->u.s[len] = '\0';
 
 	return QUIRC_SUCCESS;
 }
@@ -751,6 +756,7 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 
 	int bits = 13;
 	int count;
+	size_t len;
 
 	if (ver < 10)
 		bits = 9;
@@ -758,22 +764,26 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 		bits = 11;
 
 	count = take_bits(ds, bits);
-	if (seg->len + count + 1 > QR_PAYLOAD_MAX)
+	if ((size_t) count > sizeof seg->u.s - 1)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 
+	len = 0;
+
 	while (count >= 2) {
-		if (tuple(seg->u.payload + seg->len, ds, 11, 2, alpha_map) < 0)
+		if (tuple(seg->u.s + len, ds, 11, 2, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
-		seg->len += 2;
+		len += 2;
 		count -= 2;
 	}
 
 	if (count) {
-		if (tuple(seg->u.payload + seg->len, ds, 6, 1, alpha_map) < 0)
+		if (tuple(seg->u.s + len, ds, 6, 1, alpha_map) < 0)
 			return QUIRC_ERROR_DATA_UNDERFLOW;
-		seg->len += 1;
+		len += 1;
 		count--;
 	}
+
+	seg->u.s[len] = '\0';
 
 	return QUIRC_SUCCESS;
 }
@@ -785,18 +795,23 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 	int bits = 16;
 	int count;
 	int i;
+	size_t len;
 
 	if (ver < 10)
 		bits = 8;
 
 	count = take_bits(ds, bits);
-	if (seg->len + count + 1 > QR_PAYLOAD_MAX)
+	if ((size_t) count > sizeof seg->u.m.raw)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 8)
 		return QUIRC_ERROR_DATA_UNDERFLOW;
 
+	len = 0;
+
 	for (i = 0; i < count; i++)
-		seg->u.payload[seg->len++] = take_bits(ds, 8);
+		seg->u.m.raw[len++] = take_bits(ds, 8);
+
+	seg->u.m.len = len;
 
 	return QUIRC_SUCCESS;
 }
@@ -808,6 +823,7 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 	int bits = 12;
 	int count;
 	int i;
+	size_t len;
 
 	if (ver < 10)
 		bits = 8;
@@ -815,10 +831,12 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 		bits = 10;
 
 	count = take_bits(ds, bits);
-	if (seg->len + count * 2 + 1 > QR_PAYLOAD_MAX)
+	if ((size_t) count * 2 > sizeof seg->u.s - 1)
 		return QUIRC_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 13)
 		return QUIRC_ERROR_DATA_UNDERFLOW;
+
+	len = 0;
 
 	for (i = 0; i < count; i++) {
 		int d = take_bits(ds, 13);
@@ -835,9 +853,11 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 			sjw = intermediate + 0xc140;
 		}
 
-		seg->u.payload[seg->len++] = sjw >> 8;
-		seg->u.payload[seg->len++] = sjw & 0xff;
+		seg->u.s[len++] = sjw >> 8;
+		seg->u.s[len++] = sjw & 0xff;
 	}
+
+	seg->u.s[len] = '\0';
 
 	return QUIRC_SUCCESS;
 }
@@ -900,7 +920,6 @@ decode_payload(struct qr_data *data,
 		}
 
 		data->a[i]->mode  = mode;
-		data->a[i]->len   = 0;
 		data->a[i]->data  = NULL; // TODO: populate from ds
 		data->a[i]->count = 0;    // TODO: populate from ds
 
@@ -917,23 +936,6 @@ decode_payload(struct qr_data *data,
 
 		if (err)
 			return err;
-
-		switch (mode) {
-		case QR_MODE_NUMERIC:
-		case QR_MODE_ALNUM:
-		case QR_MODE_BYTE:
-		case QR_MODE_KANJI:
-			/* Add nul terminator to all payloads */
-			/* XXX: only for strings */
-			if (data->a[i]->len >= (int) sizeof(data->a[i]->u.payload))
-				data->a[i]->len--;
-			data->a[i]->u.payload[data->a[i]->len] = '\0';
-			break;
-
-		case QR_MODE_ECI:
-		default:
-			break;
-		}
 
 		data->n++;
 	}

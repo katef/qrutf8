@@ -212,35 +212,51 @@ prop_gated(struct theft *t, void *instance)
 				return THEFT_TRIAL_FAIL;
 			}
 
-			if (data.a[j]->len != o->o->a[j]->len) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"sement length mismatch: got=%zu, expected=%zu",
-					data.a[j]->len, o->o->a[j]->len);
-				o->gate = GATE_PAYLOAD;
-				return THEFT_TRIAL_FAIL;
-			}
-
 			switch (o->o->a[j]->mode) {
+			case QR_MODE_BYTE:
+				if (data.a[j]->u.m.len != o->o->a[j]->u.m.len) {
+					snprintf(o->v_err, sizeof o->v_err,
+						"sement length mismatch: got=%zu, expected=%zu",
+						data.a[j]->u.m.len, o->o->a[j]->u.m.len);
+					o->gate = GATE_PAYLOAD;
+					return THEFT_TRIAL_FAIL;
+				}
+
+				if (0 != memcmp(data.a[j]->u.m.raw, o->o->a[j]->u.m.raw, o->o->a[j]->u.m.len)) {
+					snprintf(o->v_err, sizeof o->v_err,
+						"payload data mismatch for segment %zu", j);
+					o->gate = GATE_PAYLOAD;
+					return THEFT_TRIAL_FAIL;
+				}
+				break;
+
 			case QR_MODE_NUMERIC:
 			case QR_MODE_ALNUM:
-			case QR_MODE_BYTE:
-				break;
-
 			case QR_MODE_KANJI:
-			case QR_MODE_ECI:
-				assert(!"unimplemented");
+				if (strlen(data.a[j]->u.s) != strlen(o->o->a[j]->u.s)) {
+					snprintf(o->v_err, sizeof o->v_err,
+						"sement length mismatch: got=%zu, expected=%zu",
+						strlen(data.a[j]->u.s), strlen(o->o->a[j]->u.s));
+					o->gate = GATE_PAYLOAD;
+					return THEFT_TRIAL_FAIL;
+				}
+
+				if (0 != strcmp(data.a[j]->u.s, o->o->a[j]->u.s)) {
+					snprintf(o->v_err, sizeof o->v_err,
+						"payload data mismatch for segment %zu", j);
+					o->gate = GATE_PAYLOAD;
+					return THEFT_TRIAL_FAIL;
+				}
 				break;
-			}
 
-			assert(data.a[j]->u.payload != NULL);
-			assert(o->o->a[j]->u.payload != NULL);
-
-			/* XXX: .len's meaning depends on .mode */
-			if (0 != memcmp(data.a[j]->u.payload, o->o->a[j]->u.payload, o->o->a[j]->len)) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"payload data mismatch for segment %zu", j);
-				o->gate = GATE_PAYLOAD;
-				return THEFT_TRIAL_FAIL;
+			case QR_MODE_ECI:
+				if (data.a[j]->u.eci != o->o->a[j]->u.eci) {
+					snprintf(o->v_err, sizeof o->v_err,
+						"payload data mismatch for segment %zu", j);
+					o->gate = GATE_PAYLOAD;
+					return THEFT_TRIAL_FAIL;
+				}
+				break;
 			}
 		}
 	}
@@ -360,24 +376,10 @@ static void
 type_free(void *instance, void *env)
 {
 	struct type_instance *o = instance;
-	size_t j;
 
 	(void) env;
 
 	if (o->gate > GATE_DECODE) {
-		for (j = 0; j < o->data.n; j++) {
-			switch (o->data.a[j]->mode) {
-			case QR_MODE_ALNUM:
-			case QR_MODE_BYTE:
-			case QR_MODE_KANJI:
-				free(o->data.a[j]->u.payload);
-				break;
-
-			case QR_MODE_ECI:
-			default:
-				break;
-			}
-		}
 		free(o->data.a);
 	}
 

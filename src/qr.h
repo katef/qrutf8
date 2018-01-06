@@ -126,21 +126,19 @@ struct qr_segment {
 	enum qr_mode mode;
 
 	union {
-		char payload[QR_PAYLOAD_MAX]; // TODO
+		char s[QR_PAYLOAD_MAX]; // TODO
+
+		/*
+		 * .len is always in the range [0, 32767]. The maximum bit length is 32767,
+		 * because the largest QR Code (version 40) has only 31329 modules.
+		 */
+		struct {
+			char raw[QR_PAYLOAD_MAX]; // TODO
+			size_t len;
+		} m;
+
 		enum eci eci;
 	} u;
-
-	/*
-	 * The length of this segment's unencoded data.
-	 * Always in the range [0, 32767]. The maximum bit length is 32767,
-	 * because the largest QR Code (version 40) has only 31329 modules.
-	 *
-	 * For numeric, alphanumeric, and kanji modes, this measures in
-	 * Unicode code points. For byte mode, this measures in bytes
-	 * (raw binary data, text in UTF-8, or other encodings).
-	 * For ECI mode, this is always zero.
-	 */
-	size_t len;
 
 	/*
 	 * Encoded data bits for this segment, packed in bitwise big endian.
