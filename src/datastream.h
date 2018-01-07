@@ -15,13 +15,8 @@ void
 append_bits(unsigned v, size_t n, void *buf, size_t *count);
 
 void
-read_bit(const struct qr *q,
-	struct qr_data *data,
-	struct datastream *ds, int i, int j);
-
-void
 read_data(const struct qr *q,
-	struct qr_data *data,
+	enum qr_mask mask,
 	struct datastream *ds);
 
 int

@@ -72,16 +72,18 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count)
 	}
 }
 
-void
+static void
 read_bit(const struct qr *q,
-	struct qr_data *data,
+	enum qr_mask mask,
 	struct datastream *ds, int i, int j)
 {
 	int bitpos  = BM_BIT(ds->data_bits);
 	int bytepos = BM_BYTE(ds->data_bits);
 	int v = qr_get_module(q, j, i);
 
-	if (mask_bit(data->mask, i, j))
+	assert(mask >= 0 && mask <= 7);
+
+	if (mask_bit(mask, i, j))
 		v ^= 1;
 
 	if (v)
@@ -92,22 +94,28 @@ read_bit(const struct qr *q,
 
 void
 read_data(const struct qr *q,
-	struct qr_data *data,
+	enum qr_mask mask,
 	struct datastream *ds)
 {
+	unsigned ver;
 	int y = q->size - 1;
 	int x = q->size - 1;
 	int dir = -1;
+
+	assert(mask >= 0 && mask <= 7);
+
+	ver = QR_VER(q->size);
+	assert(ver >= QR_VER_MIN && ver <= QR_VER_MAX);
 
 	while (x > 0) {
 		if (x == 6)
 			x--;
 
-		if (!reserved_cell(data->ver, y, x))
-			read_bit(q, data, ds, y, x);
+		if (!reserved_cell(ver, y, x))
+			read_bit(q, mask, ds, y, x);
 
-		if (!reserved_cell(data->ver, y, x - 1))
-			read_bit(q, data, ds, y, x - 1);
+		if (!reserved_cell(ver, y, x - 1))
+			read_bit(q, mask, ds, y, x - 1);
 
 		y += dir;
 		if (y < 0 || y >= (int) q->size) {

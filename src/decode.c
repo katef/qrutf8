@@ -881,7 +881,7 @@ qr_decode(const struct qr *q,
 
 	data->ver = QR_VER(q->size);
 
-	if (data->ver < 1 || data->ver > QR_VER_MAX)
+	if (data->ver < QR_VER_MIN || data->ver > QR_VER_MAX)
 		return QR_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
@@ -891,7 +891,10 @@ qr_decode(const struct qr *q,
 	if (err)
 		return err;
 
-	read_data(q, data, &ds);
+	/* TODO: destructively unapply the mask,
+	 * then we won't need to pass along the mask here */
+
+	read_data(q, data->mask, &ds);
 	err = codestream_ecc(data, stats, &ds);
 	if (err)
 		return err;
