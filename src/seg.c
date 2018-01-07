@@ -78,6 +78,63 @@ seg_len(struct qr_segment * const a[], size_t n)
 	return len;
 }
 
+bool
+seg_cmp(
+	struct qr_segment * const a[], size_t an,
+	struct qr_segment * const b[], size_t bn)
+{
+	size_t j;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (an != bn) {
+		return false;
+	}
+
+	if (seg_len(a, an) != seg_len(b, bn)) {
+		return false;
+	}
+
+	for (j = 0; j < an; j++) {
+		if (a[j]->mode != b[j]->mode) {
+			return false;
+		}
+
+		switch (b[j]->mode) {
+		case QR_MODE_BYTE:
+			if (a[j]->u.m.len != b[j]->u.m.len) {
+				return false;
+			}
+
+			if (0 != memcmp(a[j]->u.m.raw, b[j]->u.m.raw, b[j]->u.m.len)) {
+				return false;
+			}
+			break;
+
+		case QR_MODE_NUMERIC:
+		case QR_MODE_ALNUM:
+		case QR_MODE_KANJI:
+			if (strlen(a[j]->u.s) != strlen(b[j]->u.s)) {
+				return false;
+			}
+
+			if (0 != strcmp(a[j]->u.s, b[j]->u.s)) {
+				return false;
+			}
+			break;
+
+		case QR_MODE_ECI:
+			if (a[j]->u.eci != b[j]->u.eci) {
+				return false;
+			}
+			break;
+		}
+	}
+
+	return true;
+}
+
 static unsigned int
 charset_index(const char *charset, char c)
 {

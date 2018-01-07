@@ -184,81 +184,11 @@ prop_gated(struct theft *t, void *instance)
 		}
 	}
 
-	{
-		size_t j;
-
-		if (data.n != o->o->n) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"segment count mismatch: got=%zu, expected=%zu",
-				data.n, o->o->n);
-			o->gate = GATE_PAYLOAD;
-			return THEFT_TRIAL_FAIL;
-		}
-
-		if (seg_len(data.a, data.n) != seg_len(o->o->a, o->o->n)) {
-			snprintf(o->v_err, sizeof o->v_err,
-				"payload length mismatch: got=%zu, expected=%zu",
-				seg_len(data.a, data.n), seg_len(o->o->a, o->o->n));
-			o->gate = GATE_PAYLOAD;
-			return THEFT_TRIAL_FAIL;
-		}
-
-		for (j = 0; j < o->o->n; j++) {
-			if (data.a[j]->mode != o->o->a[j]->mode) {
-				snprintf(o->v_err, sizeof o->v_err,
-					"sement mode mismatch: got=%u, expected=%u",
-					data.a[j]->mode, o->o->a[j]->mode);
-				o->gate = GATE_PAYLOAD;
-				return THEFT_TRIAL_FAIL;
-			}
-
-			switch (o->o->a[j]->mode) {
-			case QR_MODE_BYTE:
-				if (data.a[j]->u.m.len != o->o->a[j]->u.m.len) {
-					snprintf(o->v_err, sizeof o->v_err,
-						"sement length mismatch: got=%zu, expected=%zu",
-						data.a[j]->u.m.len, o->o->a[j]->u.m.len);
-					o->gate = GATE_PAYLOAD;
-					return THEFT_TRIAL_FAIL;
-				}
-
-				if (0 != memcmp(data.a[j]->u.m.raw, o->o->a[j]->u.m.raw, o->o->a[j]->u.m.len)) {
-					snprintf(o->v_err, sizeof o->v_err,
-						"payload data mismatch for segment %zu", j);
-					o->gate = GATE_PAYLOAD;
-					return THEFT_TRIAL_FAIL;
-				}
-				break;
-
-			case QR_MODE_NUMERIC:
-			case QR_MODE_ALNUM:
-			case QR_MODE_KANJI:
-				if (strlen(data.a[j]->u.s) != strlen(o->o->a[j]->u.s)) {
-					snprintf(o->v_err, sizeof o->v_err,
-						"sement length mismatch: got=%zu, expected=%zu",
-						strlen(data.a[j]->u.s), strlen(o->o->a[j]->u.s));
-					o->gate = GATE_PAYLOAD;
-					return THEFT_TRIAL_FAIL;
-				}
-
-				if (0 != strcmp(data.a[j]->u.s, o->o->a[j]->u.s)) {
-					snprintf(o->v_err, sizeof o->v_err,
-						"payload data mismatch for segment %zu", j);
-					o->gate = GATE_PAYLOAD;
-					return THEFT_TRIAL_FAIL;
-				}
-				break;
-
-			case QR_MODE_ECI:
-				if (data.a[j]->u.eci != o->o->a[j]->u.eci) {
-					snprintf(o->v_err, sizeof o->v_err,
-						"payload data mismatch for segment %zu", j);
-					o->gate = GATE_PAYLOAD;
-					return THEFT_TRIAL_FAIL;
-				}
-				break;
-			}
-		}
+	if (!seg_cmp(data.a, data.n, o->o->a, o->o->n)) {
+		snprintf(o->v_err, sizeof o->v_err,
+			"segment mismatch");
+		o->gate = GATE_PAYLOAD;
+		return THEFT_TRIAL_FAIL;
 	}
 
 	(void) t;

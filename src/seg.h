@@ -5,6 +5,11 @@
 size_t
 seg_len(struct qr_segment * const a[], size_t n);
 
+bool
+seg_cmp(
+	struct qr_segment * const a[], size_t an,
+	struct qr_segment * const b[], size_t bn);
+
 int
 count_char_bits(enum qr_mode mode, unsigned ver);
 
