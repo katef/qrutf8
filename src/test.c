@@ -53,11 +53,15 @@
 
 #include <eci.h>
 #include <qr.h>
+#include <io.h>
 
+#include "internal.h"
 #include "xalloc.h"
 #include "util.h"
 
 #include "encode.c"
+#include "decode.c"
+#include "load.c"
 #include "seg.c"
 
 #include "../share/git/greatest/greatest.h"
@@ -1106,6 +1110,140 @@ GetTotalBits(void)
 	PASS();
 }
 
+
+TEST
+Examples(void)
+{
+	struct qr_data data;
+	struct qr_stats stats;
+	quirc_decode_error_t e;
+	struct qr q;
+	size_t i;
+
+	uint8_t map[QR_BUF_LEN_MAX];
+	q.map = map;
+
+	const struct {
+		const char *name;
+		size_t n;
+		struct qr_segment * const *a;
+	} a[] = {
+		{
+			"../examples/fig1.pbm",
+			1, (struct qr_segment *[]) {
+				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 } }, NULL, 0 }
+			}
+		},
+		{
+			"../examples/figG2.pbm",
+			1, (struct qr_segment *[]) {
+				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, NULL, 0 }
+			}
+		}
+	};
+
+	for (i = 0; i < ARRAY_LENGTH(a); i++) {
+		FILE *f;
+
+		f = fopen(a[i].name, "rb");
+		if (f == NULL) {
+			perror(a[i].name);
+			exit(EXIT_FAILURE);
+		}
+
+		if (!qr_load_pbm(f, &q, false)) {
+			fprintf(stderr, "load %s: %s\n", a[i].name, strerror(errno));
+			FAIL();
+		}
+
+		e = quirc_decode(&q, &data, &stats);
+		if (e) {
+			fprintf(stderr, "decode %s: %s\n", a[i].name, quirc_strerror(e));
+			FAIL();
+		}
+
+		if (!seg_cmp(data.a, data.n, a[i].a, a[i].n)) {
+			FAIL();
+		}
+
+		fclose(f);
+	}
+
+	PASS();
+}
+
+
+TEST
+Decode(void)
+{
+	struct qr_data data;
+	struct qr_stats stats;
+	quirc_decode_error_t e;
+	struct qr q;
+
+	enum eci eci;
+	enum qr_ecl ecl;
+	unsigned min, max;
+	enum qr_mask mask;
+	bool boost_ecl;
+
+	struct qr_segment **a;
+	size_t n, j;
+	size_t i;
+
+	uint8_t map[QR_BUF_LEN_MAX];
+	uint8_t tmp[QR_BUF_LEN_MAX];
+	q.map = map;
+
+	min  = QR_VER_MIN;
+	max  = QR_VER_MAX;
+	mask = QR_MASK_AUTO;
+	ecl  = QR_ECL_LOW;
+	eci  = ECI_DEFAULT;
+	boost_ecl = true;
+
+	n = 1;
+	a = xmalloc(sizeof *a * n);
+
+	const char *s[] = {
+		"",
+		"hi",
+		"HI",
+		"0",
+		"1234",
+		"01234",
+		"HIhi0123"
+	};
+
+	for (i = 0; i < ARRAY_LENGTH(s); i++) {
+		for (j = 0; j < n; j++) {
+			/* TODO: iconv from C execution character set */
+			(void) eci;
+
+			a[j] = qr_make_any(s[i]);
+		}
+
+		if (!qr_encode(a, n, ecl, min, max, mask, boost_ecl, tmp, &q)) {
+			fprintf(stderr, "encode i=%zu: %s\n", i, strerror(errno));
+			FAIL();
+		}
+
+		e = quirc_decode(&q, &data, &stats);
+		if (e) {
+			fprintf(stderr, "decode i=%zu: %s\n", i, quirc_strerror(e));
+			FAIL();
+		}
+
+		for (j = 0; j < n; j++) {
+			seg_free(a[j]);
+		}
+	}
+
+	free(a);
+
+	PASS();
+}
+
 GREATEST_MAIN_DEFS();
 
 int
@@ -1134,6 +1272,8 @@ main(int argc, char *argv[])
 	RUN_TEST(MakeAlphanumeric);
 	RUN_TEST(MakeEci);
 	RUN_TEST(GetTotalBits);
+	RUN_TEST(Examples);
+	RUN_TEST(Decode);
 
 	GREATEST_MAIN_END();
 }
