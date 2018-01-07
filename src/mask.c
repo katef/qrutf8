@@ -80,27 +80,22 @@ mask_bit(enum qr_mask mask, unsigned x, unsigned y)
 
 /*
  * XOR the data modules in this QR Code with the given mask pattern.
- * Due to XOR's mathematical properties, calling apply_mask(..., m)
- * twice with the same value is equivalent to no change at all.
+ *
+ * Due to XOR's mathematical properties, calling apply_mask()
+ * twice with the same mask is equivalent to no change at all.
  * This means it is possible to apply a mask, undo it, and try another mask.
  * Note that a final well-formed QR Code symbol needs exactly one mask applied
  * (not zero, not two, etc.).
  */
 void
-apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask)
+apply_mask(struct qr *q, enum qr_mask mask)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
-	assert(0 <= mask && mask <= 7);
 
 	for (unsigned y = 0; y < q->size; y++) {
 		for (unsigned x = 0; x < q->size; x++) {
-			struct qr tmp;
-
-			tmp.size = q->size;
-			tmp.map  = (void *) functionModules;
-
-			if (qr_get_module(&tmp, x, y)) {
+			if (reserved_module(q, x, y)) {
 				continue;
 			}
 

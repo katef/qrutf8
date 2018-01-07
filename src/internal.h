@@ -48,7 +48,7 @@ bool
 mask_bit(enum qr_mask mask, unsigned x, unsigned y);
 
 void
-apply_mask(const uint8_t *functionModules, struct qr *q, enum qr_mask mask);
+apply_mask(struct qr *q, enum qr_mask mask);
 
 bool
 qr_encode(struct qr_segment * const segs[], size_t len, enum qr_ecl ecl,

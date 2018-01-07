@@ -710,32 +710,29 @@ qr_encode(struct qr_segment * const a[], size_t n,
 	assert(count % 8 == 0);
 
 	// Draw function and data codeword modules
-	struct qr qtmp;
-	qtmp.map = tmp;
-	append_ecl(q->map, ver, ecl, qtmp.map);
+	append_ecl(q->map, ver, ecl, tmp);
 	draw_init(ver, q);
-	draw_codewords(qtmp.map, count_data_bits(ver) / 8, q);
+	draw_codewords(tmp, count_data_bits(ver) / 8, q);
 	draw_white_function_modules(q, ver);
-	draw_init(ver, &qtmp);
 
 	// Handle masking
 	if (mask == QR_MASK_AUTO) {
 		long curr = LONG_MAX;
 		for (int i = 0; i < 8; i++) {
 			draw_format(ecl, i, q);
-			apply_mask(qtmp.map, q, i);
+			apply_mask(q, i);
 			long w = penalty(q);
 			if (w < curr) {
 				mask = i;
 				curr = w;
 			}
-			apply_mask(qtmp.map, q, i);  // Undoes the mask due to XOR
+			apply_mask(q, i);  // Undoes the mask due to XOR
 		}
 	}
 
 	assert(0 <= (int) mask && (int) mask <= 7);
 	draw_format(ecl, mask, q);
-	apply_mask(qtmp.map, q, mask);
+	apply_mask(q, mask);
 
 	return true;
 }
