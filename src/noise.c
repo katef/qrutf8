@@ -25,7 +25,7 @@ qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)
 	reserved.size = q->size;
 	reserved.map  = buf;
 
-	/* TODO: merge with reserved_cell() */
+	/* TODO: merge with reserved_module() */
 	/* TODO: generalise to an enum describing regions; format, ecc, alignments, data, etc. mask together */
 	draw_init(ver, &reserved);
 

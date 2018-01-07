@@ -477,65 +477,6 @@ read_format(const struct qr *q,
 	return QR_SUCCESS;
 }
 
-int
-reserved_cell(unsigned ver, unsigned x, unsigned y)
-{
-	size_t size = QR_SIZE(ver);
-	int ax = -1, ay = -1;
-	size_t i;
-
-	/* Finder + format: top left */
-	if (x < 9 && y < 9)
-		return 1;
-
-	/* Finder + format: bottom left */
-	if (x + 8 >= size && y < 9)
-		return 1;
-
-	/* Finder + format: top right */
-	if (x < 9 && y + 8 >= size)
-		return 1;
-
-	/* Exclude timing patterns */
-	if (x == 6 || y == 6)
-		return 1;
-
-	/* Exclude ver info, if it exists. Version info sits adjacent to
-	 * the top-right and bottom-left finders in three rows, bounded by
-	 * the timing pattern.
-	 */
-	if (ver >= 7) {
-		if (x < 6 && y + 11 >= size)
-			return 1;
-		if (x + 11 >= size && y < 6)
-			return 1;
-	}
-
-	/* Exclude alignment patterns */
-	unsigned alignPatPos[QR_ALIGN_MAX];
-	size_t n = getAlignmentPatternPositions(ver, alignPatPos);
-	for (i = 0; i < n; i++) {
-		int p = alignPatPos[i];
-
-		if (abs(p - x) < 3)
-			ax = i;
-		if (abs(p - y) < 3)
-			ay = i;
-	}
-
-	if (ax >= 0 && ay >= 0) {
-		i--;
-		if (ax > 0 && ax < (int) i)
-			return 1;
-		if (ay > 0 && ay < (int) i)
-			return 1;
-		if (ay == (int) i && ax == (int) i)
-			return 1;
-	}
-
-	return 0;
-}
-
 static enum qr_decode
 codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	struct datastream *ds)

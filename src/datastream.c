@@ -97,24 +97,20 @@ read_data(const struct qr *q,
 	enum qr_mask mask,
 	struct datastream *ds)
 {
-	unsigned ver;
 	int y = q->size - 1;
 	int x = q->size - 1;
 	int dir = -1;
 
 	assert(mask >= 0 && mask <= 7);
 
-	ver = QR_VER(q->size);
-	assert(ver >= QR_VER_MIN && ver <= QR_VER_MAX);
-
 	while (x > 0) {
 		if (x == 6)
 			x--;
 
-		if (!reserved_cell(ver, y, x))
+		if (!reserved_module(q, y, x))
 			read_bit(q, mask, ds, y, x);
 
-		if (!reserved_cell(ver, y, x - 1))
+		if (!reserved_module(q, y, x - 1))
 			read_bit(q, mask, ds, y, x - 1);
 
 		y += dir;
