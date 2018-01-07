@@ -1125,17 +1125,23 @@ Examples(void)
 
 	const struct {
 		const char *name;
+		enum qr_mask mask;
+		enum qr_ecl ecl;
 		size_t n;
 		struct qr_segment * const *a;
 	} a[] = {
 		{
 			"../examples/fig1.pbm",
+			QR_MASK_5,
+			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
 				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 } }, NULL, 0 }
 			}
 		},
 		{
 			"../examples/figG2.pbm",
+			QR_MASK_3,
+			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
 				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, NULL, 0 }
 			}
@@ -1159,6 +1165,14 @@ Examples(void)
 		e = qr_decode(&q, &data, &stats);
 		if (e) {
 			fprintf(stderr, "decode %s: %s\n", a[i].name, qr_strerror(e));
+			FAIL();
+		}
+
+		if (data.ecl != a[i].ecl) {
+			FAIL();
+		}
+
+		if (data.mask != a[i].mask) {
 			FAIL();
 		}
 
