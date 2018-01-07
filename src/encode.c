@@ -177,20 +177,6 @@ reed_solomon_remainder(const void *data, size_t dataLen,
 }
 
 /*
- * Appends the given sequence of bits to the given byte-based bit buffer,
- * increasing the bit length.
- */
-void
-append_bits(unsigned v, size_t n, void *buf, size_t *count)
-{
-	assert(n <= 16 && v >> n == 0);
-
-	for (int i = n - 1; i >= 0; i--, (*count)++) {
-		((uint8_t *) buf)[BM_BYTE(*count)] |= ((v >> i) & 1) << (7 - BM_BIT(*count));
-	}
-}
-
-/*
  * Appends error correction bytes to each block of the given data array, then interleaves bytes
  * from the blocks and stores them in the result array. data[0 : rawCodewords - totalEcc] contains
  * the input data. data[rawCodewords - totalEcc : rawCodewords] is used as a temporary work area

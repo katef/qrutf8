@@ -24,6 +24,7 @@
 #include <qr.h>
 
 #include "internal.h"
+#include "datastream.h"
 
 #define MAX_POLY       64
 
@@ -435,14 +436,6 @@ correct_format(uint16_t *f_ret, unsigned *corrections)
  * Decoder algorithm
  */
 
-struct datastream {
-	uint8_t		raw[QR_PAYLOAD_MAX];
-	int		data_bits;
-	int		ptr;
-
-	uint8_t         data[QR_PAYLOAD_MAX];
-};
-
 static enum qr_decode
 read_format(const struct qr *q,
 	struct qr_data *data, struct qr_stats *stats, int which)
@@ -484,7 +477,7 @@ read_format(const struct qr *q,
 	return QR_SUCCESS;
 }
 
-static int
+int
 reserved_cell(unsigned ver, unsigned x, unsigned y)
 {
 	size_t size = QR_SIZE(ver);
@@ -543,52 +536,6 @@ reserved_cell(unsigned ver, unsigned x, unsigned y)
 	return 0;
 }
 
-static void
-read_bit(const struct qr *q,
-	struct qr_data *data,
-	struct datastream *ds, int i, int j)
-{
-	int bitpos  = BM_BIT(ds->data_bits);
-	int bytepos = BM_BYTE(ds->data_bits);
-	int v = qr_get_module(q, j, i);
-
-	if (mask_bit(data->mask, i, j))
-		v ^= 1;
-
-	if (v)
-		ds->raw[bytepos] |= (0x80 >> bitpos);
-
-	ds->data_bits++;
-}
-
-static void
-read_data(const struct qr *q,
-	struct qr_data *data,
-	struct datastream *ds)
-{
-	int y = q->size - 1;
-	int x = q->size - 1;
-	int dir = -1;
-
-	while (x > 0) {
-		if (x == 6)
-			x--;
-
-		if (!reserved_cell(data->ver, y, x))
-			read_bit(q, data, ds, y, x);
-
-		if (!reserved_cell(data->ver, y, x - 1))
-			read_bit(q, data, ds, y, x - 1);
-
-		y += dir;
-		if (y < 0 || y >= (int) q->size) {
-			dir = -dir;
-			x -= 2;
-			y += dir;
-		}
-	}
-}
-
 static enum qr_decode
 codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	struct datastream *ds)
@@ -641,32 +588,6 @@ codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	ds->data_bits = dst_offset * 8;
 
 	return QR_SUCCESS;
-}
-
-static inline
-int bits_remaining(const struct datastream *ds)
-{
-	return ds->data_bits - ds->ptr;
-}
-
-static int
-take_bits(struct datastream *ds, int len)
-{
-	int ret = 0;
-
-	while (len && (ds->ptr < ds->data_bits)) {
-		uint8_t b = ds->data[ds->ptr >> 3];
-		int bitpos = ds->ptr & 7;
-
-		ret <<= 1;
-		if ((b << bitpos) & 0x80)
-			ret |= 1;
-
-		ds->ptr++;
-		len--;
-	}
-
-	return ret;
 }
 
 static int

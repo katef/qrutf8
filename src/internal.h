@@ -33,6 +33,9 @@ extern const int8_t NUM_ERROR_CORRECTION_BLOCKS[QR_VER_MAX + 1][4];
 
 const char *qr_strerror(enum qr_decode err);
 
+int
+reserved_cell(unsigned ver, unsigned x, unsigned y);
+
 bool
 mask_bit(enum qr_mask mask, unsigned x, unsigned y);
 
