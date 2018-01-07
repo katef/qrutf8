@@ -61,14 +61,14 @@ mask_bit(enum qr_mask mask, unsigned x, unsigned y)
 	assert((y + 1) <= QR_SIZE(QR_VER_MAX));
 
 	switch (mask) {
-	case QR_MASK_0: return 0 == (x + y) % 2;
-	case QR_MASK_1: return 0 == x % 2;
-	case QR_MASK_2: return 0 == y % 3;
-	case QR_MASK_3: return 0 == (x + y) % 3;
-	case QR_MASK_4: return 0 == ((x / 2) + (y / 3)) % 2;
-	case QR_MASK_5: return 0 == (x * y) % 2 + (x * y) % 3;
-	case QR_MASK_6: return 0 == ((x * y) % 2 + (x * y) % 3) % 2;
-	case QR_MASK_7: return 0 == ((x * y) % 3 + (x + y) % 2) % 2;
+	case QR_MASK_0: return 0 == (y + x) % 2;
+	case QR_MASK_1: return 0 == y % 2;
+	case QR_MASK_2: return 0 == x % 3;
+	case QR_MASK_3: return 0 == (y + x) % 3;
+	case QR_MASK_4: return 0 == (y / 2 + x / 3) % 2;
+	case QR_MASK_5: return 0 ==  (y * x) % 2 + (y * x) % 3;
+	case QR_MASK_6: return 0 == ((y * x) % 2 + (y * x) % 3) % 2;
+	case QR_MASK_7: return 0 == ((y + x) % 2 + (y * x) % 3) % 2;
 
 	case QR_MASK_AUTO:
 		assert(!"unreached");
