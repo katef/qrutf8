@@ -232,57 +232,6 @@ append_ecl(void *data, unsigned ver, enum qr_ecl ecl, uint8_t result[])
 	}
 }
 
-/*---- Modules (pixels) ----*/
-
-bool
-qr_get_module(const struct qr *q, unsigned x, unsigned y)
-{
-	assert(q != NULL);
-	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
-	assert(x < q->size && y < q->size);
-
-	return BM_GET(q->map, y * q->size + x);
-}
-
-void
-qr_set_module(struct qr *q, unsigned x, unsigned y, bool v)
-{
-	assert(q != NULL);
-	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
-	assert(x < q->size && y < q->size);
-
-	if (v) {
-		BM_SET(q->map, y * q->size + x);
-	} else {
-		BM_CLR(q->map, y * q->size + x);
-	}
-}
-
-// Sets the module at the given coordinates, doing nothing if out of bounds.
-static void
-set_module_bounded(struct qr *q, unsigned x, unsigned y, bool v)
-{
-	assert(q != NULL);
-	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));
-
-	if (x < q->size && y < q->size) {
-		qr_set_module(q, x, y, v);
-	}
-}
-
-// Sets every pixel in the range [left : left + width] * [top : top + height] to v.
-static void
-fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr *q)
-{
-	assert(q != NULL);
-
-	for (unsigned y = 0; y < height; y++) {
-		for (unsigned x = 0; x < width; x++) {
-			qr_set_module(q, left + x, top + y, true);
-		}
-	}
-}
-
 /*
  * Calculates the positions of alignment patterns in ascending order
  * for the given version number, storing them to the given array.

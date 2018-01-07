@@ -23,6 +23,14 @@ count_data_bits(unsigned ver);
 void
 append_bits(unsigned v, size_t n, void *buf, size_t *count);
 
+// Sets the module at the given coordinates, doing nothing if out of bounds.
+void
+set_module_bounded(struct qr *q, unsigned x, unsigned y, bool v);
+
+// Sets every pixel in the range [left : left + width] * [top : top + height] to v.
+void
+fill(unsigned left, unsigned top, unsigned width, unsigned height, struct qr *q);
+
 unsigned
 getAlignmentPatternPositions(unsigned ver, unsigned a[static QR_ALIGN_MAX]);
 void
