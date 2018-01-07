@@ -281,12 +281,12 @@ main(int argc, char * const argv[])
 	if (decode) {
 		struct qr_data data;
 		struct qr_stats stats;
-		quirc_decode_error_t e;
+		enum qr_decode e;
 
-		e = quirc_decode(&q, &data, &stats);
+		e = qr_decode(&q, &data, &stats);
 
 		if (e) {
-			printf("  Decoding FAILED: %s\n", quirc_strerror(e));
+			printf("  Decoding FAILED: %s\n", qr_strerror(e));
 		} else {
 			printf("  Decoding successful:\n");
 

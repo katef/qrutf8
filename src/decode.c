@@ -130,16 +130,16 @@ static const struct galois_field gf256 = {
 };
 
 const char *
-quirc_strerror(quirc_decode_error_t err)
+qr_strerror(enum qr_decode err)
 {
 	switch (err) {
-	case QUIRC_SUCCESS:                 return "Success";
-	case QUIRC_ERROR_INVALID_GRID_SIZE: return "Invalid grid size";
-	case QUIRC_ERROR_INVALID_VERSION:   return "Invalid version";
-	case QUIRC_ERROR_FORMAT_ECC:        return "Format data ECC failure";
-	case QUIRC_ERROR_DATA_ECC:          return "ECC failure";
-	case QUIRC_ERROR_DATA_OVERFLOW:     return "Data overflow";
-	case QUIRC_ERROR_DATA_UNDERFLOW:    return "Data underflow";
+	case QR_SUCCESS:                 return "Success";
+	case QR_ERROR_INVALID_GRID_SIZE: return "Invalid grid size";
+	case QR_ERROR_INVALID_VERSION:   return "Invalid version";
+	case QR_ERROR_FORMAT_ECC:        return "Format data ECC failure";
+	case QR_ERROR_DATA_ECC:          return "ECC failure";
+	case QR_ERROR_DATA_OVERFLOW:     return "Data overflow";
+	case QR_ERROR_DATA_UNDERFLOW:    return "Data underflow";
 
 	default:
 		return "Unknown error";
@@ -318,7 +318,7 @@ eloc_poly(uint8_t *omega,
 	}
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 correct_block(uint8_t *data, int ecc_bs, int ecc_dw, unsigned *corrections)
 {
 	int npar = ecc_bs - ecc_dw;
@@ -332,7 +332,7 @@ correct_block(uint8_t *data, int ecc_bs, int ecc_dw, unsigned *corrections)
 
 	/* Compute syndrome vector */
 	if (!block_syndromes(data, ecc_bs, npar, s))
-		return QUIRC_SUCCESS;
+		return QR_SUCCESS;
 
 	berlekamp_massey(s, npar, &gf256, sigma);
 
@@ -360,9 +360,9 @@ correct_block(uint8_t *data, int ecc_bs, int ecc_dw, unsigned *corrections)
 	}
 
 	if (block_syndromes(data, ecc_bs, npar, s))
-		return QUIRC_ERROR_DATA_ECC;
+		return QR_ERROR_DATA_ECC;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
 /************************************************************************
@@ -398,7 +398,7 @@ format_syndromes(uint16_t u, uint8_t *s)
 	return nonzero;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 correct_format(uint16_t *f_ret, unsigned *corrections)
 {
 	uint16_t u = *f_ret;
@@ -412,7 +412,7 @@ correct_format(uint16_t *f_ret, unsigned *corrections)
 	 * to get S_1 .. S_6 (but we index them from 0).
 	 */
 	if (!format_syndromes(u, s))
-		return QUIRC_SUCCESS;
+		return QR_SUCCESS;
 
 	berlekamp_massey(s, FORMAT_SYNDROMES, &gf16, sigma);
 
@@ -425,10 +425,10 @@ correct_format(uint16_t *f_ret, unsigned *corrections)
 	}
 
 	if (format_syndromes(u, s))
-		return QUIRC_ERROR_FORMAT_ECC;
+		return QR_ERROR_FORMAT_ECC;
 
 	*f_ret = u;
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
 /************************************************************************
@@ -443,14 +443,14 @@ struct datastream {
 	uint8_t         data[QR_PAYLOAD_MAX];
 };
 
-static quirc_decode_error_t
+static enum qr_decode
 read_format(const struct qr *q,
 	struct qr_data *data, struct qr_stats *stats, int which)
 {
 	int i;
 	uint16_t format = 0;
 	uint16_t fdata;
-	quirc_decode_error_t err;
+	enum qr_decode err;
 
 	if (which) {
 		for (i = 0; i < 7; i++)
@@ -481,7 +481,7 @@ read_format(const struct qr *q,
 	data->ecl = fdata >> 3;
 	data->mask = fdata & 7;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
 static int
@@ -589,7 +589,7 @@ read_data(const struct qr *q,
 	}
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	struct datastream *ds)
 {
@@ -606,24 +606,24 @@ codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 	int dst_offset = 0;
 	int i;
 
-	struct quirc_rs_params {
+	struct qr_rs_params {
 		int bs; /* Small block size */
 		int dw; /* Small data words */
 	};
 
-	struct quirc_rs_params sb_ecc;
+	struct qr_rs_params sb_ecc;
 	sb_ecc.bs = ecc_bs;
 	sb_ecc.dw = shortBlockDataLen;
 
-	struct quirc_rs_params lb_ecc;
+	struct qr_rs_params lb_ecc;
 	lb_ecc.bs = ecc_bs + 1;
 	lb_ecc.dw = shortBlockDataLen + 1;
 
 	for (i = 0; i < bc; i++) {
 		uint8_t *dst = ds->data + dst_offset;
-		const struct quirc_rs_params *ecc = (i < numShortBlocks) ? &sb_ecc : &lb_ecc;
+		const struct qr_rs_params *ecc = (i < numShortBlocks) ? &sb_ecc : &lb_ecc;
 		const int num_ec = ecc_bs - ecc->dw;
-		quirc_decode_error_t err;
+		enum qr_decode err;
 		int j;
 
 		for (j = 0; j < ecc->dw; j++)
@@ -640,7 +640,7 @@ codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 
 	ds->data_bits = dst_offset * 8;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
 static inline
@@ -697,7 +697,7 @@ tuple(char *s,
 	return 0;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_numeric(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
@@ -715,37 +715,37 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 
 	count = take_bits(ds, bits);
 	if ((size_t) count > sizeof seg->u.s - 1)
-		return QUIRC_ERROR_DATA_OVERFLOW;
+		return QR_ERROR_DATA_OVERFLOW;
 
 	len = 0;
 
 	while (count >= 3) {
 		if (tuple(seg->u.s + len, ds, 10, 3, numeric_map) < 0)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 		len += 3;
 		count -= 3;
 	}
 
 	if (count >= 2) {
 		if (tuple(seg->u.s + len, ds, 7, 2, numeric_map) < 0)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 		len += 2;
 		count -= 2;
 	}
 
 	if (count) {
 		if (tuple(seg->u.s + len, ds, 4, 1, numeric_map) < 0)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 		len += 1;
 		count--;
 	}
 
 	seg->u.s[len] = '\0';
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_alnum(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
@@ -765,30 +765,30 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 
 	count = take_bits(ds, bits);
 	if ((size_t) count > sizeof seg->u.s - 1)
-		return QUIRC_ERROR_DATA_OVERFLOW;
+		return QR_ERROR_DATA_OVERFLOW;
 
 	len = 0;
 
 	while (count >= 2) {
 		if (tuple(seg->u.s + len, ds, 11, 2, alpha_map) < 0)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 		len += 2;
 		count -= 2;
 	}
 
 	if (count) {
 		if (tuple(seg->u.s + len, ds, 6, 1, alpha_map) < 0)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 		len += 1;
 		count--;
 	}
 
 	seg->u.s[len] = '\0';
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_byte(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
@@ -802,9 +802,9 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 
 	count = take_bits(ds, bits);
 	if ((size_t) count > sizeof seg->u.m.raw)
-		return QUIRC_ERROR_DATA_OVERFLOW;
+		return QR_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 8)
-		return QUIRC_ERROR_DATA_UNDERFLOW;
+		return QR_ERROR_DATA_UNDERFLOW;
 
 	len = 0;
 
@@ -813,10 +813,10 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 
 	seg->u.m.len = len;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_kanji(unsigned ver, struct qr_segment *seg,
 	struct datastream *ds)
 {
@@ -832,9 +832,9 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 
 	count = take_bits(ds, bits);
 	if ((size_t) count * 2 > sizeof seg->u.s - 1)
-		return QUIRC_ERROR_DATA_OVERFLOW;
+		return QR_ERROR_DATA_OVERFLOW;
 	if (bits_remaining(ds) < count * 13)
-		return QUIRC_ERROR_DATA_UNDERFLOW;
+		return QR_ERROR_DATA_UNDERFLOW;
 
 	len = 0;
 
@@ -859,38 +859,38 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 
 	seg->u.s[len] = '\0';
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_eci(struct qr_segment *seg,
 	struct datastream *ds)
 {
 	unsigned eci;
 
 	if (bits_remaining(ds) < 8)
-		return QUIRC_ERROR_DATA_UNDERFLOW;
+		return QR_ERROR_DATA_UNDERFLOW;
 
 	eci = take_bits(ds, 8);
 
 	if ((eci & 0xc0) == 0x80) {
 		if (bits_remaining(ds) < 8)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 
 		eci = (eci << 8) | take_bits(ds, 8);
 	} else if ((eci & 0xe0) == 0xc0) {
 		if (bits_remaining(ds) < 16)
-			return QUIRC_ERROR_DATA_UNDERFLOW;
+			return QR_ERROR_DATA_UNDERFLOW;
 
 		eci = (eci << 16) | take_bits(ds, 16);
 	}
 
 	seg->u.eci = eci;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-static quirc_decode_error_t
+static enum qr_decode
 decode_payload(struct qr_data *data,
 	struct datastream *ds)
 {
@@ -900,14 +900,14 @@ decode_payload(struct qr_data *data,
 	while (bits_remaining(ds) >= 4) {
 		void *tmp;
 
-		quirc_decode_error_t err = QUIRC_SUCCESS;
+		enum qr_decode err = QR_SUCCESS;
 		enum qr_mode mode = take_bits(ds, 4);
 
 		/* XXX */
 		tmp = realloc(data->a, sizeof *data->a * (data->n + 1));
 		if (tmp == NULL) {
 			free(data->a);
-			return QUIRC_ERROR_DATA_OVERFLOW; // XXX
+			return QR_ERROR_DATA_OVERFLOW; // XXX
 		}
 		data->a = tmp;
 
@@ -916,7 +916,7 @@ decode_payload(struct qr_data *data,
 		data->a[i] = malloc(sizeof *data->a[i]);
 		if (data->a[i] == NULL) {
 			free(data->a);
-			return QUIRC_ERROR_DATA_OVERFLOW; // XXX
+			return QR_ERROR_DATA_OVERFLOW; // XXX
 		}
 
 		data->a[i]->mode  = mode;
@@ -942,18 +942,18 @@ decode_payload(struct qr_data *data,
 
 done:
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 
-quirc_decode_error_t
-quirc_decode(const struct qr *q,
+enum qr_decode
+qr_decode(const struct qr *q,
 	struct qr_data *data, struct qr_stats *stats)
 {
-	quirc_decode_error_t err;
+	enum qr_decode err;
 	struct datastream ds;
 
 	if ((q->size - 17) % 4)
-		return QUIRC_ERROR_INVALID_GRID_SIZE;
+		return QR_ERROR_INVALID_GRID_SIZE;
 
 	memset(data, 0, sizeof(*data));
 	memset(&ds, 0, sizeof(ds));
@@ -961,7 +961,7 @@ quirc_decode(const struct qr *q,
 	data->ver = QR_VER(q->size);
 
 	if (data->ver < 1 || data->ver > QR_VER_MAX)
-		return QUIRC_ERROR_INVALID_VERSION;
+		return QR_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
 	err = read_format(q, data, stats, 0);
@@ -979,6 +979,6 @@ quirc_decode(const struct qr *q,
 	if (err)
 		return err;
 
-	return QUIRC_SUCCESS;
+	return QR_SUCCESS;
 }
 

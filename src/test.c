@@ -1116,7 +1116,7 @@ Examples(void)
 {
 	struct qr_data data;
 	struct qr_stats stats;
-	quirc_decode_error_t e;
+	enum qr_decode e;
 	struct qr q;
 	size_t i;
 
@@ -1156,9 +1156,9 @@ Examples(void)
 			FAIL();
 		}
 
-		e = quirc_decode(&q, &data, &stats);
+		e = qr_decode(&q, &data, &stats);
 		if (e) {
-			fprintf(stderr, "decode %s: %s\n", a[i].name, quirc_strerror(e));
+			fprintf(stderr, "decode %s: %s\n", a[i].name, qr_strerror(e));
 			FAIL();
 		}
 
@@ -1178,7 +1178,7 @@ Decode(void)
 {
 	struct qr_data data;
 	struct qr_stats stats;
-	quirc_decode_error_t e;
+	enum qr_decode e;
 	struct qr q;
 
 	enum eci eci;
@@ -1228,9 +1228,9 @@ Decode(void)
 			FAIL();
 		}
 
-		e = quirc_decode(&q, &data, &stats);
+		e = qr_decode(&q, &data, &stats);
 		if (e) {
-			fprintf(stderr, "decode i=%zu: %s\n", i, quirc_strerror(e));
+			fprintf(stderr, "decode i=%zu: %s\n", i, qr_strerror(e));
 			FAIL();
 		}
 

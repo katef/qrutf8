@@ -51,7 +51,7 @@ struct type_instance {
 	/* decoded */
 	struct qr_data data;
 	struct qr_stats stats;
-	quirc_decode_error_t quirc_err;
+	enum qr_decode qr_err;
 
 	/* verified */
 	char v_err[256];
@@ -113,18 +113,18 @@ prop_gated(struct theft *t, void *instance)
 	}
 
 	{
-		quirc_decode_error_t e;
+		enum qr_decode e;
 
-		e = quirc_decode(&o->q, &data, &stats);
+		e = qr_decode(&o->q, &data, &stats);
 
 		if ((g & GATE_NOISE) != 0) {
-			if (o->codeword_noise > 0 && e == QUIRC_ERROR_DATA_ECC) {
+			if (o->codeword_noise > 0 && e == QR_ERROR_DATA_ECC) {
 				return THEFT_TRIAL_SKIP;
 			}
 		}
 
 		if (e) {
-			o->quirc_err = e;
+			o->qr_err = e;
 			o->gate = GATE_DECODE;
 			return THEFT_TRIAL_FAIL;
 		}
@@ -342,7 +342,7 @@ type_print(FILE *f, const void *instance, void *env)
 	printf("	Size: %zu\n", o->q.size);
 
 	if (o->gate == GATE_DECODE) {
-		fprintf(stderr, "quirc_decode: %s\n", quirc_strerror(o->quirc_err));
+		fprintf(stderr, "qr_decode: %s\n", qr_strerror(o->qr_err));
 		return;
 	}
 
