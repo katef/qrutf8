@@ -221,5 +221,17 @@ qr_isalnum(const char *s);
 bool
 qr_isnumeric(const char *s);
 
+/*
+ * XOR the data modules in this QR Code with the given mask pattern.
+ *
+ * Due to XOR's mathematical properties, calling apply_mask()
+ * twice with the same mask is equivalent to no change at all.
+ * This means it is possible to apply a mask, undo it, and try another mask.
+ * Note that a final well-formed QR Code symbol needs exactly one mask applied
+ * (not zero, not two, etc.).
+ */
+void
+qr_apply_mask(struct qr *q, enum qr_mask mask);
+
 #endif
 

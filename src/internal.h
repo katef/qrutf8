@@ -45,12 +45,6 @@ bool
 reserved_module(const struct qr *q, unsigned x, unsigned y);
 
 bool
-mask_bit(enum qr_mask mask, unsigned x, unsigned y);
-
-void
-apply_mask(struct qr *q, enum qr_mask mask);
-
-bool
 qr_encode(struct qr_segment * const segs[], size_t len, enum qr_ecl ecl,
 	unsigned min, unsigned max, int mask, bool boost_ecl, void *tmp, struct qr *q);
 

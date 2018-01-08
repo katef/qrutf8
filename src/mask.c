@@ -53,7 +53,7 @@
 
 #include "internal.h"
 
-bool
+static bool
 mask_bit(enum qr_mask mask, unsigned x, unsigned y)
 {
 	assert(0 <= mask && mask <= 7);
@@ -78,17 +78,8 @@ mask_bit(enum qr_mask mask, unsigned x, unsigned y)
 	return false;
 }
 
-/*
- * XOR the data modules in this QR Code with the given mask pattern.
- *
- * Due to XOR's mathematical properties, calling apply_mask()
- * twice with the same mask is equivalent to no change at all.
- * This means it is possible to apply a mask, undo it, and try another mask.
- * Note that a final well-formed QR Code symbol needs exactly one mask applied
- * (not zero, not two, etc.).
- */
 void
-apply_mask(struct qr *q, enum qr_mask mask)
+qr_apply_mask(struct qr *q, enum qr_mask mask)
 {
 	assert(q != NULL);
 	assert(QR_SIZE(QR_VER_MIN) <= q->size && q->size <= QR_SIZE(QR_VER_MAX));

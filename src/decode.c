@@ -834,12 +834,11 @@ qr_decode(const struct qr *q,
 		return err;
 
 	/* Remove mask */
-	/* TODO: would be nice to store the unmasked image in *data anyway */
 	struct qr qtmp;
 	qtmp.map  = tmp;
 	qtmp.size = q->size;
 	memcpy(tmp, q->map, QR_BUF_LEN(data->ver));
-	apply_mask(&qtmp, data->mask); // Undoes the mask due to XOR
+	qr_apply_mask(&qtmp, data->mask); // Undoes the mask due to XOR
 
 	read_data(&qtmp, &ds);
 	err = codestream_ecc(data, stats, &ds);

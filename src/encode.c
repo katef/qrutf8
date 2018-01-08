@@ -720,19 +720,19 @@ qr_encode(struct qr_segment * const a[], size_t n,
 		long curr = LONG_MAX;
 		for (int i = 0; i < 8; i++) {
 			draw_format(ecl, i, q);
-			apply_mask(q, i);
+			qr_apply_mask(q, i);
 			long w = penalty(q);
 			if (w < curr) {
 				mask = i;
 				curr = w;
 			}
-			apply_mask(q, i);  // Undoes the mask due to XOR
+			qr_apply_mask(q, i);  // Undoes the mask due to XOR
 		}
 	}
 
 	assert(0 <= (int) mask && (int) mask <= 7);
 	draw_format(ecl, mask, q);
-	apply_mask(q, mask);
+	qr_apply_mask(q, mask);
 
 	return true;
 }

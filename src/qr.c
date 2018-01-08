@@ -296,6 +296,14 @@ main(int argc, char * const argv[])
 			printf("    ECC level: %c\n", "MLHQ"[(int) data.ecl]);
 			printf("    Mask: %d\n", data.mask);
 
+			struct qr mq;
+			uint8_t mtmp[QR_BUF_LEN_MAX];
+			mq.size = q.size;
+			mq.map = mtmp;
+			memcpy(mq.map, q.map, QR_BUF_LEN(data.ver));
+			qr_apply_mask(&mq, data.mask);
+			qr_print_utf8qb(stdout, &mq, wide, invert);
+
 			printf("    Noise: %u\n", noise);
 			printf("    Format corrections: %u\n", stats.format_corrections);
 			printf("    Codeword corrections: %u\n", stats.codeword_corrections);
