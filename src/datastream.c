@@ -76,14 +76,14 @@ static void
 read_bit(const struct qr *q,
 	struct datastream *ds, int i, int j)
 {
-	int bitpos  = BM_BIT(ds->data_bits);
-	int bytepos = BM_BYTE(ds->data_bits);
+	int bitpos  = BM_BIT(ds->bits);
+	int bytepos = BM_BYTE(ds->bits);
 
 	if (qr_get_module(q, j, i)) {
 		ds->raw[bytepos] |= (0x80 >> bitpos);
 	}
 
-	ds->data_bits++;
+	ds->bits++;
 }
 
 void
@@ -114,20 +114,15 @@ read_data(const struct qr *q,
 }
 
 int
-bits_remaining(const struct datastream *ds, int ds_ptr)
-{
-	return ds->data_bits - ds_ptr;
-}
-
-int
 take_bits(struct datastream *ds, int len, int *ds_ptr)
 {
 	int ret = 0;
 
 	assert(ds != NULL);
 	assert(ds_ptr != NULL);
+	assert(len <= ds->bits);
 
-	while (len > 0 && (*ds_ptr < ds->data_bits)) {
+	while (len > 0 && (*ds_ptr < ds->bits)) {
 		uint8_t b = ds->data[*ds_ptr >> 3];
 		int bitpos = *ds_ptr & 7;
 

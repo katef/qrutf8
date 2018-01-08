@@ -526,7 +526,7 @@ codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 		dst_offset += ecc->dw;
 	}
 
-	ds->data_bits = dst_offset * 8;
+	ds->bits = dst_offset * 8;
 
 	return QR_SUCCESS;
 }
@@ -546,7 +546,7 @@ tuple(char *s,
 
 	n = strlen(charset);
 
-	if (bits_remaining(ds, *ds_ptr) < bits)
+	if (ds->bits - *ds_ptr < bits)
 		return -1;
 
 	tuple = take_bits(ds, bits, ds_ptr);
@@ -665,7 +665,7 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 	count = take_bits(ds, bits, ds_ptr);
 	if ((size_t) count > sizeof seg->u.m.raw)
 		return QR_ERROR_DATA_OVERFLOW;
-	if (bits_remaining(ds, *ds_ptr) < count * 8)
+	if (ds->bits - *ds_ptr < count * 8)
 		return QR_ERROR_DATA_UNDERFLOW;
 
 	len = 0;
@@ -695,7 +695,7 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 	count = take_bits(ds, bits, ds_ptr);
 	if ((size_t) count * 2 > sizeof seg->u.s - 1)
 		return QR_ERROR_DATA_OVERFLOW;
-	if (bits_remaining(ds, *ds_ptr) < count * 13)
+	if (ds->bits - *ds_ptr < count * 13)
 		return QR_ERROR_DATA_UNDERFLOW;
 
 	len = 0;
@@ -730,18 +730,18 @@ decode_eci(struct qr_segment *seg,
 {
 	unsigned eci;
 
-	if (bits_remaining(ds, *ds_ptr) < 8)
+	if (ds->bits - *ds_ptr < 8)
 		return QR_ERROR_DATA_UNDERFLOW;
 
 	eci = take_bits(ds, 8, ds_ptr);
 
 	if ((eci & 0xc0) == 0x80) {
-		if (bits_remaining(ds, *ds_ptr) < 8)
+		if (ds->bits - *ds_ptr < 8)
 			return QR_ERROR_DATA_UNDERFLOW;
 
 		eci = (eci << 8) | take_bits(ds, 8, ds_ptr);
 	} else if ((eci & 0xe0) == 0xc0) {
-		if (bits_remaining(ds, *ds_ptr) < 16)
+		if (ds->bits - *ds_ptr < 16)
 			return QR_ERROR_DATA_UNDERFLOW;
 
 		eci = (eci << 16) | take_bits(ds, 16, ds_ptr);
@@ -759,7 +759,7 @@ decode_payload(struct qr_data *data,
 	data->n = 0;
 	data->a = NULL;
 
-	while (bits_remaining(ds, *ds_ptr) >= 4) {
+	while (ds->bits - *ds_ptr >= 4) {
 		void *tmp;
 
 		enum qr_decode err = QR_SUCCESS;
