@@ -114,8 +114,9 @@ prop_gated(struct theft *t, void *instance)
 
 	{
 		enum qr_decode e;
+		char dtmp[QR_BUF_LEN_MAX];
 
-		e = qr_decode(&o->q, &data, &stats);
+		e = qr_decode(&o->q, &data, &stats, dtmp);
 
 		if ((g & GATE_NOISE) != 0) {
 			if (o->codeword_noise > 0 && e == QR_ERROR_DATA_ECC) {

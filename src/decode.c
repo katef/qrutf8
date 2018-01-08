@@ -809,7 +809,8 @@ done:
 
 enum qr_decode
 qr_decode(const struct qr *q,
-	struct qr_data *data, struct qr_stats *stats)
+	struct qr_data *data, struct qr_stats *stats,
+	void *tmp)
 {
 	enum qr_decode err;
 	struct datastream ds;
@@ -832,10 +833,15 @@ qr_decode(const struct qr *q,
 	if (err)
 		return err;
 
-	/* TODO: destructively unapply the mask,
-	 * then we won't need to pass along the mask here */
+	/* Remove mask */
+	/* TODO: would be nice to store the unmasked image in *data anyway */
+	struct qr qtmp;
+	qtmp.map  = tmp;
+	qtmp.size = q->size;
+	memcpy(tmp, q->map, QR_BUF_LEN(data->ver));
+	apply_mask(&qtmp, data->mask); // Undoes the mask due to XOR
 
-	read_data(q, data->mask, &ds);
+	read_data(&qtmp, &ds);
 	err = codestream_ecc(data, stats, &ds);
 	if (err)
 		return err;

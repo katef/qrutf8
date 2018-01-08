@@ -1150,6 +1150,7 @@ Examples(void)
 
 	for (i = 0; i < ARRAY_LENGTH(a); i++) {
 		FILE *f;
+		uint8_t dtmp[QR_BUF_LEN_MAX];
 
 		f = fopen(a[i].name, "rb");
 		if (f == NULL) {
@@ -1162,7 +1163,7 @@ Examples(void)
 			FAIL();
 		}
 
-		e = qr_decode(&q, &data, &stats);
+		e = qr_decode(&q, &data, &stats, dtmp);
 		if (e) {
 			fprintf(stderr, "decode %s: %s\n", a[i].name, qr_strerror(e));
 			FAIL();
@@ -1230,6 +1231,8 @@ Decode(void)
 	};
 
 	for (i = 0; i < ARRAY_LENGTH(s); i++) {
+		uint8_t dtmp[QR_BUF_LEN_MAX];
+
 		for (j = 0; j < n; j++) {
 			/* TODO: iconv from C execution character set */
 			(void) eci;
@@ -1242,7 +1245,7 @@ Decode(void)
 			FAIL();
 		}
 
-		e = qr_decode(&q, &data, &stats);
+		e = qr_decode(&q, &data, &stats, dtmp);
 		if (e) {
 			fprintf(stderr, "decode i=%zu: %s\n", i, qr_strerror(e));
 			FAIL();

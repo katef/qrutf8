@@ -283,7 +283,9 @@ main(int argc, char * const argv[])
 		struct qr_stats stats;
 		enum qr_decode e;
 
-		e = qr_decode(&q, &data, &stats);
+		uint8_t tmp[QR_BUF_LEN_MAX];
+
+		e = qr_decode(&q, &data, &stats, tmp);
 
 		if (e) {
 			printf("  Decoding FAILED: %s\n", qr_strerror(e));
@@ -308,8 +310,8 @@ main(int argc, char * const argv[])
 		struct qr t;
 		double p;
 
-		uint8_t tmap[QR_BUF_LEN_MAX];
-		t.map = tmap;
+		uint8_t tmp[QR_BUF_LEN_MAX];
+		t.map = tmp;
 
 		/* Open input file. */
 		f = fopen(target, "rb");

@@ -74,44 +74,35 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count)
 
 static void
 read_bit(const struct qr *q,
-	enum qr_mask mask,
 	struct datastream *ds, int i, int j)
 {
 	int bitpos  = BM_BIT(ds->data_bits);
 	int bytepos = BM_BYTE(ds->data_bits);
-	int v = qr_get_module(q, j, i);
 
-	assert(mask >= 0 && mask <= 7);
-
-	if (mask_bit(mask, i, j))
-		v ^= 1;
-
-	if (v)
+	if (qr_get_module(q, j, i)) {
 		ds->raw[bytepos] |= (0x80 >> bitpos);
+	}
 
 	ds->data_bits++;
 }
 
 void
 read_data(const struct qr *q,
-	enum qr_mask mask,
 	struct datastream *ds)
 {
 	int y = q->size - 1;
 	int x = q->size - 1;
 	int dir = -1;
 
-	assert(mask >= 0 && mask <= 7);
-
 	while (x > 0) {
 		if (x == 6)
 			x--;
 
 		if (!reserved_module(q, y, x))
-			read_bit(q, mask, ds, y, x);
+			read_bit(q, ds, y, x);
 
 		if (!reserved_module(q, y, x - 1))
-			read_bit(q, mask, ds, y, x - 1);
+			read_bit(q, ds, y, x - 1);
 
 		y += dir;
 		if (y < 0 || y >= (int) q->size) {
