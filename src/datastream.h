@@ -6,7 +6,6 @@
 struct datastream {
 	uint8_t		raw[QR_PAYLOAD_MAX];
 	int		data_bits;
-	int		ptr;
 
 	uint8_t         data[QR_PAYLOAD_MAX];
 };
@@ -19,10 +18,10 @@ read_data(const struct qr *q,
 	struct datastream *ds);
 
 int
-bits_remaining(const struct datastream *ds);
+bits_remaining(const struct datastream *ds, int ds_ptr);
 
 int
-take_bits(struct datastream *ds, int len);
+take_bits(struct datastream *ds, int len, int *ds_ptr);
 
 #endif
 

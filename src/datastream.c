@@ -114,25 +114,28 @@ read_data(const struct qr *q,
 }
 
 int
-bits_remaining(const struct datastream *ds)
+bits_remaining(const struct datastream *ds, int ds_ptr)
 {
-	return ds->data_bits - ds->ptr;
+	return ds->data_bits - ds_ptr;
 }
 
 int
-take_bits(struct datastream *ds, int len)
+take_bits(struct datastream *ds, int len, int *ds_ptr)
 {
 	int ret = 0;
 
-	while (len && (ds->ptr < ds->data_bits)) {
-		uint8_t b = ds->data[ds->ptr >> 3];
-		int bitpos = ds->ptr & 7;
+	assert(ds != NULL);
+	assert(ds_ptr != NULL);
+
+	while (len > 0 && (*ds_ptr < ds->data_bits)) {
+		uint8_t b = ds->data[*ds_ptr >> 3];
+		int bitpos = *ds_ptr & 7;
 
 		ret <<= 1;
 		if ((b << bitpos) & 0x80)
 			ret |= 1;
 
-		ds->ptr++;
+		(*ds_ptr)++;
 		len--;
 	}
 
