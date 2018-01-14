@@ -74,7 +74,7 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count)
 
 static void
 read_bit(const struct qr *q,
-	struct datastream *ds, int i, int j)
+	struct datastream_raw *ds, int i, int j)
 {
 	int bitpos  = BM_BIT(ds->bits);
 	int bytepos = BM_BYTE(ds->bits);
@@ -88,7 +88,7 @@ read_bit(const struct qr *q,
 
 void
 read_data(const struct qr *q,
-	struct datastream *ds)
+	struct datastream_raw *ds)
 {
 	int y = q->size - 1;
 	int x = q->size - 1;
@@ -114,7 +114,7 @@ read_data(const struct qr *q,
 }
 
 int
-take_bits(struct datastream *ds, int len, int *ds_ptr)
+take_bits(struct datastream_data *ds, int len, int *ds_ptr)
 {
 	int ret = 0;
 
