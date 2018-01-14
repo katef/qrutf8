@@ -533,8 +533,8 @@ codestream_ecc(struct qr_data *data, struct qr_stats *stats,
 
 static int
 tuple(char *s,
-	struct datastream_data *ds, int *ds_ptr,
-	int bits, int digits,
+	struct datastream_data *ds, size_t *ds_ptr,
+	size_t bits, int digits,
 	const char *charset)
 {
 	int tuple;
@@ -561,13 +561,13 @@ tuple(char *s,
 
 static enum qr_decode
 decode_numeric(unsigned ver, struct qr_segment *seg,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
 	static const char *numeric_map =
 		"0123456789";
 
-	int bits = 14;
-	int count;
+	size_t bits = 14;
+	size_t count;
 	size_t len;
 
 	if (ver < 10)
@@ -609,15 +609,15 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 
 static enum qr_decode
 decode_alnum(unsigned ver, struct qr_segment *seg,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
 	static const char *alpha_map =
 		"0123456789"
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		" $%*+-./:";
 
-	int bits = 13;
-	int count;
+	size_t bits = 13;
+	size_t count;
 	size_t len;
 
 	if (ver < 10)
@@ -652,11 +652,10 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 
 static enum qr_decode
 decode_byte(unsigned ver, struct qr_segment *seg,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
-	int bits = 16;
-	int count;
-	int i;
+	size_t bits = 16;
+	size_t count, i;
 	size_t len;
 
 	if (ver < 10)
@@ -680,11 +679,10 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 
 static enum qr_decode
 decode_kanji(unsigned ver, struct qr_segment *seg,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
-	int bits = 12;
-	int count;
-	int i;
+	size_t bits = 12;
+	size_t count, i;
 	size_t len;
 
 	if (ver < 10)
@@ -726,7 +724,7 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 
 static enum qr_decode
 decode_eci(struct qr_segment *seg,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
 	unsigned eci;
 
@@ -754,7 +752,7 @@ decode_eci(struct qr_segment *seg,
 
 static enum qr_decode
 decode_payload(struct qr_data *data,
-	struct datastream_data *ds, int *ds_ptr)
+	struct datastream_data *ds, size_t *ds_ptr)
 {
 	data->n = 0;
 	data->a = NULL;
@@ -847,7 +845,7 @@ qr_decode(const struct qr *q,
 	if (err)
 		return err;
 
-	int ds_ptr = 0;
+	size_t ds_ptr = 0;
 	err = decode_payload(data, &corrected, &ds_ptr);
 	if (err)
 		return err;

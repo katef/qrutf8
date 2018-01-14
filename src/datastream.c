@@ -114,7 +114,7 @@ read_data(const struct qr *q,
 }
 
 int
-take_bits(struct datastream_data *ds, int len, int *ds_ptr)
+take_bits(struct datastream_data *ds, size_t len, size_t *ds_ptr)
 {
 	int ret = 0;
 
