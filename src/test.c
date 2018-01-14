@@ -1147,6 +1147,14 @@ Examples(void)
 			}
 		},
 		{
+			"../examples/figI1.pbm",
+			QR_MASK_2,
+			QR_ECL_MEDIUM,
+			1, (struct qr_segment *[]) {
+				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, NULL, 0 }
+			}
+		},
+		{
 			"../examples/a37.pbm",
 			QR_MASK_6,
 			QR_ECL_MEDIUM,
