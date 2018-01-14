@@ -61,7 +61,7 @@ seg_len(struct qr_segment * const a[], size_t n)
 	for (j = 0; j < n; j++) {
 		switch (a[j]->mode) {
 		case QR_MODE_BYTE:
-			len += a[j]->u.m.len;
+			len += a[j]->u.m.bits * 8; // padded to a byte
 			break;
 
 		case QR_MODE_NUMERIC:
@@ -103,11 +103,11 @@ seg_cmp(
 
 		switch (b[j]->mode) {
 		case QR_MODE_BYTE:
-			if (a[j]->u.m.len != b[j]->u.m.len) {
+			if (a[j]->u.m.bits != b[j]->u.m.bits) {
 				return false;
 			}
 
-			if (0 != memcmp(a[j]->u.m.raw, b[j]->u.m.raw, b[j]->u.m.len)) {
+			if (0 != memcmp(a[j]->u.m.data, b[j]->u.m.data, BM_LEN(b[j]->u.m.bits))) {
 				return false;
 			}
 			break;
@@ -284,11 +284,10 @@ count_total_bits(struct qr_segment * const a[], size_t n, unsigned ver)
 		assert(0 <= ccbits && ccbits <= 16);
 
 		// Fail if segment length value doesn't fit in the length field's bit-width
-		/* XXX: i don't understand why this is neccessary; remove .len from the encoder? */
 		switch (a[i]->mode) {
 		case QR_MODE_BYTE:
-			assert(a[i]->u.m.len <= INT16_MAX);
-			if (a[i]->u.m.len >= (1UL << ccbits))
+			assert(a[i]->u.m.bits <= INT16_MAX);
+			if (a[i]->u.m.bits * 8 >= (1UL << ccbits))
 				return -1;
 			break;
 
@@ -348,21 +347,21 @@ qr_make_bytes(const void *data, size_t len)
 	int count;
 
 	assert(data != NULL);
-	assert(len <= sizeof seg->u.m.raw);
+	assert(len <= sizeof seg->u.m.data);
 
 	seg = malloc(sizeof *seg);
 	if (seg == NULL) {
 		return NULL;
 	}
 
-	memcpy(seg->u.m.raw, data, len);
-	seg->u.m.len = len;
+	memcpy(seg->u.m.data, data, len);
+	seg->u.m.bits = len * 8;
 
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
 
 	seg->mode  = QR_MODE_BYTE;
-	seg->data  = seg->u.m.raw;
+	seg->data  = seg->u.m.data;
 	seg->count = count;
 
 	return seg;
@@ -632,8 +631,8 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 			/* TODO: iconv here, per eci */
 			(void) eci;
 
-			printf("      source string: len=%zu bytes\n", a[j]->u.m.len);
-			hexdump(stdout, (void *) a[j]->u.m.raw, a[j]->u.m.len);
+			printf("      source string: len=%zu bytes\n", BM_LEN(a[j]->u.m.bits));
+			hexdump(stdout, (void *) a[j]->u.m.data, BM_LEN(a[j]->u.m.bits));
 			break;
 
 		case QR_MODE_ECI:

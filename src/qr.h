@@ -120,6 +120,15 @@ struct qr_stats {
 };
 
 /*
+ * .bits is always in the range [0, 32767]. The maximum bit length is 32767,
+ * because the largest QR Code (version 40) has only 31329 modules.
+ */
+struct qr_bytes {
+	uint8_t data[QR_PAYLOAD_MAX];
+	size_t bits;
+};
+
+/*
  * A segment of user/application data that a QR Code symbol can convey.
  */
 struct qr_segment {
@@ -127,16 +136,7 @@ struct qr_segment {
 
 	union {
 		char s[QR_PAYLOAD_MAX]; // TODO
-
-		/*
-		 * .len is always in the range [0, 32767]. The maximum bit length is 32767,
-		 * because the largest QR Code (version 40) has only 31329 modules.
-		 */
-		struct {
-			char raw[QR_PAYLOAD_MAX]; // TODO
-			size_t len;
-		} m;
-
+		struct qr_bytes m;
 		enum eci eci;
 	} u;
 

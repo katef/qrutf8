@@ -661,7 +661,7 @@ qr_encode(struct qr_segment * const a[], size_t n,
 
 		switch (a[i]->mode) {
 		case QR_MODE_BYTE:
-			len = a[i]->u.m.len;
+			len = BM_LEN(a[i]->u.m.bits);
 			break;
 
 		case QR_MODE_NUMERIC:

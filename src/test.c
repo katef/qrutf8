@@ -889,7 +889,7 @@ MakeBytes(void)
 	{
 		const uint8_t data[] = {0x00};
 		struct qr_segment *seg = qr_make_bytes(data, 1);
-		ASSERT_EQ(seg->u.m.len, 1);
+		ASSERT_EQ(seg->u.m.bits, 8);
 		ASSERT_EQ(seg->count, 8);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x00);
 		seg_free(seg);
@@ -897,7 +897,7 @@ MakeBytes(void)
 	{
 		const uint8_t data[] = {0xEF, 0xBB, 0xBF};
 		struct qr_segment *seg = qr_make_bytes(data, 3);
-		ASSERT_EQ(seg->u.m.len, 3);
+		ASSERT_EQ(seg->u.m.bits, 3 * 8);
 		ASSERT_EQ(seg->count, 24);
 		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xEF);
 		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0xBB);
@@ -1135,7 +1135,7 @@ Examples(void)
 			QR_MASK_5,
 			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
-				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 } }, NULL, 0 }
+				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 * 8 } }, NULL, 0 }
 			}
 		},
 		{
