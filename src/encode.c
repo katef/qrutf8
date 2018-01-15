@@ -681,8 +681,8 @@ qr_encode(struct qr_segment * const a[], size_t n,
 		append_bits(a[i]->mode, 4, q->map, &count);
 		append_bits(len, count_char_bits(a[i]->mode, ver), q->map, &count);
 
-		for (size_t j = 0; j < a[i]->count; j++) {
-			append_bits((((const uint8_t *) a[i]->data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
+		for (size_t j = 0; j < a[i]->m.bits; j++) {
+			append_bits((((const uint8_t *) a[i]->m.data)[BM_BYTE(j)] >> (7 - BM_BIT(j))) & 1, 1, q->map, &count);
 		}
 	}
 

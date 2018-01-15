@@ -779,9 +779,9 @@ decode_payload(struct qr_data *data,
 			return QR_ERROR_DATA_OVERFLOW; // XXX
 		}
 
-		data->a[i]->mode  = mode;
-		data->a[i]->data  = NULL; // TODO: populate from ds
-		data->a[i]->count = 0;    // TODO: populate from ds
+		data->a[i]->mode   = mode;
+		(void) data->a[i]->m.data; // TODO: populate from ds
+		data->a[i]->m.bits = 0;    // TODO: populate from ds
 
 		switch (mode) {
 		case QR_MODE_NUMERIC: err = decode_numeric(data->ver, data->a[i], ds, ds_ptr); break;

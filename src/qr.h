@@ -142,15 +142,10 @@ struct qr_segment {
 
 	/*
 	 * Encoded data bits for this segment, packed in bitwise big endian.
-	 * Set NULL if the bit length is zero.
-	 */
-	const void *data;
-
-	/*
-	 * The number of valid data bits used in the buffer. Requires
+	 * .bits is the number of valid data bits used in the buffer. Requires
 	 * 0 <= count <= 32767, and count <= (capacity of data array) * 8.
 	 */
-	size_t count;
+	struct qr_bytes m;
 };
 
 /*

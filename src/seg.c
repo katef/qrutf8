@@ -278,7 +278,7 @@ count_total_bits(struct qr_segment * const a[], size_t n, unsigned ver)
 	assert(QR_VER_MIN <= ver && ver <= QR_VER_MAX);
 
 	for (size_t i = 0; i < n; i++) {
-		assert(a[i]->count <= INT16_MAX);
+		assert(a[i]->m.bits <= INT16_MAX);
 
 		int ccbits = count_char_bits(a[i]->mode, ver);
 		assert(0 <= ccbits && ccbits <= 16);
@@ -302,7 +302,7 @@ count_total_bits(struct qr_segment * const a[], size_t n, unsigned ver)
 			break;
 		}
 
-		long tmp = 4L + ccbits + a[i]->count;
+		long tmp = 4L + ccbits + a[i]->m.bits;
 		if (tmp > INT16_MAX - len)
 			return -1;
 
@@ -360,9 +360,9 @@ qr_make_bytes(const void *data, size_t len)
 	count = count_seg_bits(QR_MODE_BYTE, len);
 	assert(count != -1);
 
-	seg->mode  = QR_MODE_BYTE;
-	seg->data  = seg->u.m.data;
-	seg->count = count;
+	seg->mode   = QR_MODE_BYTE;
+	seg->m.bits = count;
+	memcpy(seg->m.data, data, len);
 
 	return seg;
 }
@@ -421,9 +421,9 @@ qr_make_numeric(const char *s)
 	assert(rcount == (size_t) count);
 	/* XXX: then why memset at the start? */
 
-	seg->mode  = QR_MODE_NUMERIC;
-	seg->data  = data;
-	seg->count = rcount;
+	seg->mode   = QR_MODE_NUMERIC;
+	seg->m.bits = rcount;
+	memcpy(seg->m.data, data, BM_LEN(seg->m.bits));
 
 	return seg;
 }
@@ -482,9 +482,9 @@ qr_make_alnum(const char *s)
 	assert(rcount == (size_t) count);
 	/* XXX: then why memset at the start? */
 
-	seg->mode  = QR_MODE_ALNUM;
-	seg->data  = data;
-	seg->count = rcount;
+	seg->mode   = QR_MODE_ALNUM;
+	seg->m.bits = rcount;
+	memcpy(seg->m.data, data, BM_LEN(seg->m.bits));
 
 	return seg;
 }
@@ -521,10 +521,10 @@ qr_make_eci(long assignVal)
 		assert(false);
 	}
 
-	seg->mode  = QR_MODE_ECI;
-	seg->u.eci = (enum eci) assignVal;
-	seg->data  = data;
-	seg->count = rcount;
+	seg->mode   = QR_MODE_ECI;
+	seg->u.eci  = (enum eci) assignVal;
+	seg->m.bits = rcount;
+	memcpy(seg->m.data, data, BM_LEN(seg->m.bits));
 
 	return seg;
 }
@@ -644,8 +644,8 @@ seg_print(FILE *f, size_t n, struct qr_segment * const a[])
 			break;
 		}
 
-		printf("      encoded data: count=%zu bits\n", a[j]->count);
-		hexdump(stdout, a[j]->data, BM_LEN(a[j]->count));
+		printf("      encoded data: %zu bits\n", a[j]->m.bits);
+		hexdump(stdout, a[j]->m.data, BM_LEN(a[j]->m.bits));
 	}
 	printf("    }\n");
 	printf("    Segments total data length: %zu\n", seg_len(a, n));

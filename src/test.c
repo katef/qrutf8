@@ -890,18 +890,18 @@ MakeBytes(void)
 		const uint8_t data[] = {0x00};
 		struct qr_segment *seg = qr_make_bytes(data, 1);
 		ASSERT_EQ(seg->u.m.bits, 8);
-		ASSERT_EQ(seg->count, 8);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x00);
+		ASSERT_EQ(seg->m.bits, 8);
+		ASSERT_EQ(seg->m.data[0], 0x00);
 		seg_free(seg);
 	}
 	{
 		const uint8_t data[] = {0xEF, 0xBB, 0xBF};
 		struct qr_segment *seg = qr_make_bytes(data, 3);
 		ASSERT_EQ(seg->u.m.bits, 3 * 8);
-		ASSERT_EQ(seg->count, 24);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xEF);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0xBB);
-		ASSERT_EQ(((const uint8_t *) seg->data)[2], 0xBF);
+		ASSERT_EQ(seg->m.bits, 24);
+		ASSERT_EQ(seg->m.data[0], 0xEF);
+		ASSERT_EQ(seg->m.data[1], 0xBB);
+		ASSERT_EQ(seg->m.data[2], 0xBF);
 		seg_free(seg);
 	}
 
@@ -915,34 +915,34 @@ MakeNumeric(void)
 	{
 		struct qr_segment *seg = qr_make_numeric("9");
 		ASSERT_EQ(strlen(seg->u.s), 1);
-		ASSERT_EQ(seg->count, 4);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x90);
+		ASSERT_EQ(seg->m.bits, 4);
+		ASSERT_EQ(seg->m.data[0], 0x90);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_numeric("81");
 		ASSERT_EQ(strlen(seg->u.s), 2);
-		ASSERT_EQ(seg->count, 7);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA2);
+		ASSERT_EQ(seg->m.bits, 7);
+		ASSERT_EQ(seg->m.data[0], 0xA2);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_numeric("673");
 		ASSERT_EQ(strlen(seg->u.s), 3);
-		ASSERT_EQ(seg->count, 10);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA8);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0x40);
+		ASSERT_EQ(seg->m.bits, 10);
+		ASSERT_EQ(seg->m.data[0], 0xA8);
+		ASSERT_EQ(seg->m.data[1], 0x40);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_numeric("3141592653");
 		ASSERT_EQ(strlen(seg->u.s), 10);
-		ASSERT_EQ(seg->count, 34);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x4E);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0x89);
-		ASSERT_EQ(((const uint8_t *) seg->data)[2], 0xF4);
-		ASSERT_EQ(((const uint8_t *) seg->data)[3], 0x24);
-		ASSERT_EQ(((const uint8_t *) seg->data)[4], 0xC0);
+		ASSERT_EQ(seg->m.bits, 34);
+		ASSERT_EQ(seg->m.data[0], 0x4E);
+		ASSERT_EQ(seg->m.data[1], 0x89);
+		ASSERT_EQ(seg->m.data[2], 0xF4);
+		ASSERT_EQ(seg->m.data[3], 0x24);
+		ASSERT_EQ(seg->m.data[4], 0xC0);
 		seg_free(seg);
 	}
 
@@ -956,25 +956,25 @@ MakeAlphanumeric(void)
 	{
 		struct qr_segment *seg = qr_make_alnum("A");
 		ASSERT_EQ(strlen(seg->u.s), 1);
-		ASSERT_EQ(seg->count, 6);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x28);
+		ASSERT_EQ(seg->m.bits, 6);
+		ASSERT_EQ(seg->m.data[0], 0x28);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_alnum("%:");
 		ASSERT_EQ(strlen(seg->u.s), 2);
-		ASSERT_EQ(seg->count, 11);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xDB);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0x40);
+		ASSERT_EQ(seg->m.bits, 11);
+		ASSERT_EQ(seg->m.data[0], 0xDB);
+		ASSERT_EQ(seg->m.data[1], 0x40);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_alnum("Q R");
 		ASSERT_EQ(strlen(seg->u.s), 3);
-		ASSERT_EQ(seg->count, 17);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x96);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0xCD);
-		ASSERT_EQ(((const uint8_t *) seg->data)[2], 0x80);
+		ASSERT_EQ(seg->m.bits, 17);
+		ASSERT_EQ(seg->m.data[0], 0x96);
+		ASSERT_EQ(seg->m.data[1], 0xCD);
+		ASSERT_EQ(seg->m.data[2], 0x80);
 		seg_free(seg);
 	}
 
@@ -988,23 +988,23 @@ MakeEci(void)
 	{
 		struct qr_segment *seg = qr_make_eci(127);
 		ASSERT_EQ(seg->mode, QR_MODE_ECI);
-		ASSERT_EQ(seg->count, 8);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0x7F);
+		ASSERT_EQ(seg->m.bits, 8);
+		ASSERT_EQ(seg->m.data[0], 0x7F);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_eci(10345);
-		ASSERT_EQ(seg->count, 16);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xA8);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0x69);
+		ASSERT_EQ(seg->m.bits, 16);
+		ASSERT_EQ(seg->m.data[0], 0xA8);
+		ASSERT_EQ(seg->m.data[1], 0x69);
 		seg_free(seg);
 	}
 	{
 		struct qr_segment *seg = qr_make_eci(999999);
-		ASSERT_EQ(seg->count, 24);
-		ASSERT_EQ(((const uint8_t *) seg->data)[0], 0xCF);
-		ASSERT_EQ(((const uint8_t *) seg->data)[1], 0x42);
-		ASSERT_EQ(((const uint8_t *) seg->data)[2], 0x3F);
+		ASSERT_EQ(seg->m.bits, 24);
+		ASSERT_EQ(seg->m.data[0], 0xCF);
+		ASSERT_EQ(seg->m.data[1], 0x42);
+		ASSERT_EQ(seg->m.data[2], 0x3F);
 		seg_free(seg);
 	}
 
@@ -1021,7 +1021,7 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_BYTE, .u.m = { { 'x', 'y', 'z' }, 3 }, NULL, 24 },
+			& (struct qr_segment) { QR_MODE_BYTE, .u.m = { { 'x', 'y', 'z' }, 3 }, { { 0 }, 24 } },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 2), 36);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 10), 44);
@@ -1029,10 +1029,10 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_ECI,     .u.eci = ECI_DEFAULT, NULL, 8 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, .u.s   = "abcdxyz", NULL, 24 },
-			& (struct qr_segment) { QR_MODE_ALNUM,   .u.s   = "X", NULL, 6 },
-			& (struct qr_segment) { QR_MODE_KANJI,   .u.s   = "xxyy", NULL, 52 },
+			& (struct qr_segment) { QR_MODE_ECI,     .u.eci = ECI_DEFAULT, { { 0 },  8 } },
+			& (struct qr_segment) { QR_MODE_NUMERIC, .u.s   = "abcdxyz",   { { 0 }, 24 } },
+			& (struct qr_segment) { QR_MODE_ALNUM,   .u.s   = "X",         { { 0 },  6 } },
+			& (struct qr_segment) { QR_MODE_KANJI,   .u.s   = "xxyy",      { { 0 }, 52 } },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 9), 133);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 21), 139);
@@ -1040,7 +1040,7 @@ GetTotalBits(void)
 	}
 	{
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_BYTE, .u.m = { "...", 4093 }, NULL, 32744 },
+			& (struct qr_segment) { QR_MODE_BYTE, .u.m = { "...", 4093 }, { { 0 }, 32744 } },
 		};
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 1), -1);
 		ASSERT_EQ(count_total_bits(segs, ARRAY_LENGTH(segs), 10), 32764);
@@ -1056,11 +1056,11 @@ GetTotalBits(void)
 		b[sizeof b - 1] = '\0';
 
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, NULL, 6824 },
-			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, NULL, 5390 },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, { { 0 }, 6824 } },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, { { 0 }, 6824 } },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, { { 0 }, 6824 } },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, { { 0 }, 6824 } },
+			& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "" }, { { 0 }, 5390 } },
 		};
 		strcpy(segs[0]->u.s, a);
 		strcpy(segs[1]->u.s, a);
@@ -1081,16 +1081,16 @@ GetTotalBits(void)
 		b[sizeof b - 1] = '\0';
 
 		struct qr_segment *segs[] = {
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, NULL, 3315 },
-			& (struct qr_segment) { QR_MODE_ALNUM, { .s = "" }, NULL, 2811 },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_KANJI, { .s = "" }, { { 0 }, 3315 } },
+			& (struct qr_segment) { QR_MODE_ALNUM, { .s = "" }, { { 0 }, 2811 } },
 		};
 		strcpy(segs[0]->u.s, a);
 		strcpy(segs[1]->u.s, a);
@@ -1135,7 +1135,7 @@ Examples(void)
 			QR_MASK_5,
 			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
-				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 * 8 } }, NULL, 0 }
+				& (struct qr_segment) { QR_MODE_BYTE, { .m = { "QR Code Symbol", 14 * 8 } }, { { 0 }, 0 } }
 			}
 		},
 		{
@@ -1143,7 +1143,7 @@ Examples(void)
 			QR_MASK_3,
 			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
-				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, NULL, 0 }
+				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, { { 0 }, 0 } }
 			}
 		},
 		{
@@ -1151,7 +1151,7 @@ Examples(void)
 			QR_MASK_2,
 			QR_ECL_MEDIUM,
 			1, (struct qr_segment *[]) {
-				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, NULL, 0 }
+				& (struct qr_segment) { QR_MODE_NUMERIC, { .s = "01234567" }, { { 0 }, 0 } }
 			}
 		},
 		{
@@ -1163,7 +1163,7 @@ Examples(void)
 					"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 					"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 					"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-					"ABCDEFGHIJKLMNOPQRSTUV" }, NULL, 0 }
+					"ABCDEFGHIJKLMNOPQRSTUV" }, { { 0 }, 0 } }
 			}
 		}
 	};
