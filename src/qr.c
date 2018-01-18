@@ -293,7 +293,7 @@ main(int argc, char * const argv[])
 			printf("  Decoding successful:\n");
 
 			printf("    Version: %d\n", data.ver);
-			printf("    ECC level: %c\n", "MLHQ"[(int) data.ecl]);
+			printf("    ECC level: %c\n", "LMQH"[(int) data.ecl]);
 			printf("    Mask: %d\n", data.mask);
 
 			struct qr mq;

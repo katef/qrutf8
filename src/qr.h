@@ -92,10 +92,10 @@ enum qr_mode {
 };
 
 enum qr_ecl {
-	QR_ECL_LOW      = 1,
-	QR_ECL_MEDIUM   = 0,
-	QR_ECL_QUARTILE = 3,
-	QR_ECL_HIGH     = 2
+	QR_ECL_LOW,
+	QR_ECL_MEDIUM,
+	QR_ECL_QUARTILE,
+	QR_ECL_HIGH
 };
 
 /* XXX: define in terms of something else */

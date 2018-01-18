@@ -436,6 +436,21 @@ correct_format(uint16_t *f_ret, unsigned *corrections)
  * Decoder algorithm
  */
 
+static enum qr_ecl
+ecl_decode(int e)
+{
+	switch (e) {
+	case 0x1: return QR_ECL_LOW;
+	case 0x0: return QR_ECL_MEDIUM;
+	case 0x3: return QR_ECL_QUARTILE;
+	case 0x2: return QR_ECL_HIGH;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
 static enum qr_decode
 read_format(const struct qr *q,
 	struct qr_data *data, struct qr_stats *stats, int which)
@@ -471,7 +486,7 @@ read_format(const struct qr *q,
 		return err;
 
 	fdata = format >> 10;
-	data->ecl = fdata >> 3;
+	data->ecl = ecl_decode(fdata >> 3);
 	data->mask = fdata & 7;
 
 	return QR_SUCCESS;

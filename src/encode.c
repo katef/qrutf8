@@ -374,6 +374,21 @@ draw_white_function_modules(struct qr *q, unsigned ver)
 	}
 }
 
+static int
+ecl_encode(enum qr_ecl ecl)
+{
+	switch (ecl) {
+	case QR_ECL_LOW:      return 0x1;
+	case QR_ECL_MEDIUM:   return 0x0;
+	case QR_ECL_QUARTILE: return 0x3;
+	case QR_ECL_HIGH:     return 0x2;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
 /*
  * Draws two copies of the format bits (with its own error correction code) based
  * on the given mask and error correction level. This always draws all modules of
@@ -387,8 +402,7 @@ draw_format(enum qr_ecl ecl, enum qr_mask mask, struct qr *q)
 
 	// Calculate error correction code and pack bits
 	assert(0 <= mask && mask <= 7);
-	int data = (int) ecl;
-	data = data << 3 | mask;  // ecl-derived value is uint2, mask is uint3
+	int data = ecl_encode(ecl) << 3 | mask;  // ecl-derived value is uint2, mask is uint3
 	int rem = data;
 	for (int i = 0; i < 10; i++)
 		rem = (rem << 1) ^ ((rem >> 9) * 0x537);
@@ -623,16 +637,9 @@ qr_encode(struct qr_segment * const a[], size_t n,
 
 	// Increase the error correction level while the data still fits in the current version number
 	if (boost_ecl) {
-		const enum qr_ecl e[] = {
-			QR_ECL_LOW,
-			QR_ECL_MEDIUM,
-			QR_ECL_QUARTILE,
-			QR_ECL_HIGH
-		};
-
-		for (size_t i = 0; i < sizeof e / sizeof *e; i++) {
-			if (dataUsedBits <= count_codewords(ver, e[i]) * 8) {
-				ecl = e[i];
+		for (enum qr_ecl e = 0; e < 4; e++) {
+			if (dataUsedBits <= count_codewords(ver, e) * 8) {
+				ecl = e;
 			}
 		}
 	}
