@@ -3,6 +3,9 @@
 #define DATASTREAM_H
 
 void
+append_bit(bool v, void *buf, size_t *bits);
+
+void
 append_bits(unsigned v, size_t n, void *buf, size_t *count);
 
 void

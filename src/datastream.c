@@ -58,6 +58,21 @@
 #include "internal.h"
 #include "datastream.h"
 
+void
+append_bit(bool v, void *buf, size_t *bits)
+{
+	int bitpos  = BM_BIT(*bits);
+	int bytepos = BM_BYTE(*bits);
+
+	if (v) {
+		((uint8_t *) buf)[bytepos] |=  (1U << (7 - bitpos));
+	} else {
+		((uint8_t *) buf)[bytepos] &= ~(1U << (7 - bitpos));
+	}
+
+	(*bits)++;
+}
+
 /*
  * Appends the given sequence of bits to the given byte-based bit buffer,
  * increasing the bit length.
@@ -67,23 +82,9 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count)
 {
 	assert(n <= 16 && v >> n == 0);
 
-	for (int i = n - 1; i >= 0; i--, (*count)++) {
-		((uint8_t *) buf)[BM_BYTE(*count)] |= ((v >> i) & 1) << (7 - BM_BIT(*count));
+	for (int i = n - 1; i >= 0; i--) {
+		append_bit((v >> i) & 1, buf, count);
 	}
-}
-
-static void
-read_bit(const struct qr *q,
-	struct qr_bytes *ds, int i, int j)
-{
-	int bitpos  = BM_BIT(ds->bits);
-	int bytepos = BM_BYTE(ds->bits);
-
-	if (qr_get_module(q, j, i)) {
-		ds->data[bytepos] |= (0x80 >> bitpos);
-	}
-
-	ds->bits++;
 }
 
 void
@@ -99,10 +100,10 @@ read_data(const struct qr *q,
 			x--;
 
 		if (!reserved_module(q, y, x))
-			read_bit(q, ds, y, x);
+			append_bit(qr_get_module(q, x, y), ds->data, &ds->bits);
 
 		if (!reserved_module(q, y, x - 1))
-			read_bit(q, ds, y, x - 1);
+			append_bit(qr_get_module(q, x - 1, y), ds->data, &ds->bits);
 
 		y += dir;
 		if (y < 0 || y >= (int) q->size) {
