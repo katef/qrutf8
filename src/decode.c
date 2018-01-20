@@ -135,6 +135,7 @@ qr_strerror(enum qr_decode err)
 {
 	switch (err) {
 	case QR_SUCCESS:                 return "Success";
+	case QR_ERROR_INVALID_MODE:      return "Invalid mode";
 	case QR_ERROR_INVALID_GRID_SIZE: return "Invalid grid size";
 	case QR_ERROR_INVALID_VERSION:   return "Invalid version";
 	case QR_ERROR_FORMAT_ECC:        return "Format data ECC failure";
@@ -798,6 +799,10 @@ decode_payload(struct qr_data *data,
 		(void) data->a[i]->m.data; // TODO: populate from ds
 		data->a[i]->m.bits = 0;    // TODO: populate from ds
 
+		if (mode == 0x0) {
+			goto done;
+		}
+
 		switch (mode) {
 		case QR_MODE_NUMERIC: err = decode_numeric(data->ver, data->a[i], ds, ds_ptr); break;
 		case QR_MODE_ALNUM:   err = decode_alnum  (data->ver, data->a[i], ds, ds_ptr); break;
@@ -806,7 +811,8 @@ decode_payload(struct qr_data *data,
 		case QR_MODE_ECI:     err = decode_eci    (           data->a[i], ds, ds_ptr); break;
 
 		default:
-			goto done;
+			free(data->a);
+			return QR_ERROR_INVALID_MODE; // XXX
 		}
 
 		if (err)
