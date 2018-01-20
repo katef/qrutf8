@@ -2,8 +2,14 @@
 #ifndef QR_IO_H
 #define QR_IO_H
 
+enum qr_utf8 {
+	QR_UTF8_SINGLE, /* single width (typically rectangular) */
+	QR_UTF8_WIDE,   /* terminal wide mode */
+	QR_UTF8_DOUBLE  /* double-up glyphs for width */
+};
+
 void
-qr_print_utf8qb(FILE *f, const struct qr *q, bool wide, bool invert);
+qr_print_utf8qb(FILE *f, const struct qr *q, enum qr_utf8 uwidth, bool invert);
 
 void
 qr_print_pbm1(FILE *f, const struct qr *q, bool invert);

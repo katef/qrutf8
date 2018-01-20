@@ -339,7 +339,7 @@ type_print(FILE *f, const void *instance, void *env)
 		return;
 	}
 
-	qr_print_utf8qb(stdout, &o->q, true, true);
+	qr_print_utf8qb(stdout, &o->q, QR_UTF8_DOUBLE, true);
 	printf("	Size: %zu\n", o->q.size);
 
 	if (o->gate == GATE_DECODE) {

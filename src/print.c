@@ -7,6 +7,7 @@
 
 #include <eci.h>
 #include <qr.h>
+#include <io.h>
 
 #include "util.h"
 
@@ -51,7 +52,7 @@ error:
 }
 
 void
-qr_print_utf8qb(FILE *f, const struct qr *q, bool wide, bool invert)
+qr_print_utf8qb(FILE *f, const struct qr *q, enum qr_utf8 uwidth, bool invert)
 {
 	size_t border;
 
@@ -61,11 +62,11 @@ qr_print_utf8qb(FILE *f, const struct qr *q, bool wide, bool invert)
 	border = 4; /* per the spec */
 
 	for (int y = -border; y < (int) (q->size + border); y += 2) {
-		if (wide) {
+		if (uwidth == QR_UTF8_WIDE) {
 			fprintf(f, "\033#6");
 		}
 
-		for (int x = -border; x < (int) (q->size + border); x += 2) {
+		for (int x = -border; x < (int) (q->size + border); x += uwidth == QR_UTF8_DOUBLE ? 1 : 2) {
 			char s[5] = { 0x00, 0x00, 0x00, 0x00, 0x00 };
 			size_t i;
 			int e;

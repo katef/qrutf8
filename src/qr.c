@@ -154,7 +154,7 @@ main(int argc, char * const argv[])
 	bool boost_ecl;
 	bool decode;
 	bool invert;
-	bool wide;
+	enum qr_utf8 uwidth;
 	unsigned noise;
 	enum img img;
 	const char *filename = NULL;
@@ -168,14 +168,14 @@ main(int argc, char * const argv[])
 	boost_ecl = true;
 	decode = false;
 	invert = true;
-	wide = false;
+	uwidth = QR_UTF8_DOUBLE;
 	noise = 0;
 	img = IMG_UTF8QB;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:w"), c != -1) {
+		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:sw"), c != -1) {
 			switch (c) {
 			case 'd':
 				decode = true;
@@ -198,7 +198,11 @@ main(int argc, char * const argv[])
 				break;
 
 			case 'w':
-				wide = true;
+				uwidth = QR_UTF8_WIDE;
+				break;
+
+			case 's':
+				uwidth = QR_UTF8_SINGLE;
 				break;
 
 			case 'n':
@@ -272,10 +276,10 @@ main(int argc, char * const argv[])
 	qr_noise(&q, noise, 0, false);
 
 	switch (img) {
-	case IMG_UTF8QB: qr_print_utf8qb(stdout, &q, wide, invert); break;
-	case IMG_PBM1:   qr_print_pbm1(stdout, &q, invert);         break;
-	case IMG_PBM4:   qr_print_pbm4(stdout, &q, invert);         break;
-	case IMG_SVG:    qr_print_svg(stdout, &q, invert);          break;
+	case IMG_UTF8QB: qr_print_utf8qb(stdout, &q, uwidth, invert); break;
+	case IMG_PBM1:   qr_print_pbm1(stdout, &q, invert);           break;
+	case IMG_PBM4:   qr_print_pbm4(stdout, &q, invert);           break;
+	case IMG_SVG:    qr_print_svg(stdout, &q, invert);            break;
 	}
 
 	if (decode) {
@@ -302,7 +306,7 @@ main(int argc, char * const argv[])
 			mq.map = mtmp;
 			memcpy(mq.map, q.map, QR_BUF_LEN(data.ver));
 			qr_apply_mask(&mq, data.mask);
-			qr_print_utf8qb(stdout, &mq, wide, invert);
+			qr_print_utf8qb(stdout, &mq, uwidth, invert);
 
 			printf("    Noise: %u\n", noise);
 			printf("    Format corrections: %u\n", stats.format_corrections);
