@@ -89,7 +89,7 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count)
 
 void
 read_data(const struct qr *q,
-	struct qr_bytes *ds)
+	void *buf, size_t *bits)
 {
 	int y = q->size - 1;
 	int x = q->size - 1;
@@ -100,10 +100,10 @@ read_data(const struct qr *q,
 			x--;
 
 		if (!reserved_module(q, y, x))
-			append_bit(qr_get_module(q, x, y), ds->data, &ds->bits);
+			append_bit(qr_get_module(q, x, y), buf, bits);
 
 		if (!reserved_module(q, y, x - 1))
-			append_bit(qr_get_module(q, x - 1, y), ds->data, &ds->bits);
+			append_bit(qr_get_module(q, x - 1, y), buf, bits);
 
 		y += dir;
 		if (y < 0 || y >= (int) q->size) {
@@ -115,16 +115,17 @@ read_data(const struct qr *q,
 }
 
 int
-take_bits(struct qr_bytes *ds, size_t len, size_t *ds_ptr)
+take_bits(const void *buf, size_t bits,
+	size_t len, size_t *ds_ptr)
 {
 	int ret = 0;
 
-	assert(ds != NULL);
+	assert(buf != NULL);
 	assert(ds_ptr != NULL);
-	assert(len <= ds->bits);
+	assert(len <= bits);
 
-	while (len > 0 && (*ds_ptr < ds->bits)) {
-		uint8_t b = ds->data[*ds_ptr >> 3];
+	while (len > 0 && (*ds_ptr < bits)) {
+		uint8_t b = ((const uint8_t *) buf)[*ds_ptr >> 3];
 		int bitpos = *ds_ptr & 7;
 
 		ret <<= 1;

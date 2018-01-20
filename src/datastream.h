@@ -10,10 +10,11 @@ append_bits(unsigned v, size_t n, void *buf, size_t *count);
 
 void
 read_data(const struct qr *q,
-	struct qr_bytes *ds);
+	void *buf, size_t *bits);
 
 int
-take_bits(struct qr_bytes *ds, size_t len, size_t *ds_ptr);
+take_bits(const void *buf, size_t bits,
+	size_t len, size_t *ds_ptr);
 
 #endif
 

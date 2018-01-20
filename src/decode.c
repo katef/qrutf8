@@ -566,7 +566,7 @@ tuple(char *s,
 	if (ds->bits - *ds_ptr < bits)
 		return -1;
 
-	tuple = take_bits(ds, bits, ds_ptr);
+	tuple = take_bits(ds->data, ds->bits, bits, ds_ptr);
 
 	for (i = 0; i < digits; i++) {
 		s[digits - i - 1] = charset[tuple % n];
@@ -592,7 +592,7 @@ decode_numeric(unsigned ver, struct qr_segment *seg,
 	else if (ver < 27)
 		bits = 12;
 
-	count = take_bits(ds, bits, ds_ptr);
+	count = take_bits(ds->data, ds->bits, bits, ds_ptr);
 	if ((size_t) count > sizeof seg->u.s - 1)
 		return QR_ERROR_DATA_OVERFLOW;
 
@@ -642,7 +642,7 @@ decode_alnum(unsigned ver, struct qr_segment *seg,
 	else if (ver < 27)
 		bits = 11;
 
-	count = take_bits(ds, bits, ds_ptr);
+	count = take_bits(ds->data, ds->bits, bits, ds_ptr);
 	if ((size_t) count > sizeof seg->u.s - 1)
 		return QR_ERROR_DATA_OVERFLOW;
 
@@ -678,7 +678,7 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 	if (ver < 10)
 		bits = 8;
 
-	count = take_bits(ds, bits, ds_ptr);
+	count = take_bits(ds->data, ds->bits, bits, ds_ptr);
 	if ((size_t) count > sizeof seg->u.m.data)
 		return QR_ERROR_DATA_OVERFLOW;
 	if (ds->bits - *ds_ptr < count * 8)
@@ -687,7 +687,7 @@ decode_byte(unsigned ver, struct qr_segment *seg,
 	len = 0;
 
 	for (i = 0; i < count; i++)
-		seg->u.m.data[len++] = take_bits(ds, 8, ds_ptr);
+		seg->u.m.data[len++] = take_bits(ds->data, ds->bits, 8, ds_ptr);
 
 	seg->u.m.bits = len * 8;
 
@@ -707,7 +707,7 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 	else if (ver < 27)
 		bits = 10;
 
-	count = take_bits(ds, bits, ds_ptr);
+	count = take_bits(ds->data, ds->bits, bits, ds_ptr);
 	if ((size_t) count * 2 > sizeof seg->u.s - 1)
 		return QR_ERROR_DATA_OVERFLOW;
 	if (ds->bits - *ds_ptr < count * 13)
@@ -716,7 +716,7 @@ decode_kanji(unsigned ver, struct qr_segment *seg,
 	len = 0;
 
 	for (i = 0; i < count; i++) {
-		int d = take_bits(ds, 13, ds_ptr);
+		int d = take_bits(ds->data, ds->bits, 13, ds_ptr);
 		int msB = d / 0xc0;
 		int lsB = d % 0xc0;
 		int intermediate = (msB << 8) | lsB;
@@ -748,18 +748,18 @@ decode_eci(struct qr_segment *seg,
 	if (ds->bits - *ds_ptr < 8)
 		return QR_ERROR_DATA_UNDERFLOW;
 
-	eci = take_bits(ds, 8, ds_ptr);
+	eci = take_bits(ds->data, ds->bits, 8, ds_ptr);
 
 	if ((eci & 0xc0) == 0x80) {
 		if (ds->bits - *ds_ptr < 8)
 			return QR_ERROR_DATA_UNDERFLOW;
 
-		eci = (eci << 8) | take_bits(ds, 8, ds_ptr);
+		eci = (eci << 8) | take_bits(ds->data, ds->bits, 8, ds_ptr);
 	} else if ((eci & 0xe0) == 0xc0) {
 		if (ds->bits - *ds_ptr < 16)
 			return QR_ERROR_DATA_UNDERFLOW;
 
-		eci = (eci << 16) | take_bits(ds, 16, ds_ptr);
+		eci = (eci << 16) | take_bits(ds->data, ds->bits, 16, ds_ptr);
 	}
 
 	seg->u.eci = eci;
@@ -778,7 +778,7 @@ decode_payload(struct qr_data *data,
 		void *tmp;
 
 		enum qr_decode err = QR_SUCCESS;
-		enum qr_mode mode = take_bits(ds, 4, ds_ptr);
+		enum qr_mode mode = take_bits(ds->data, ds->bits, 4, ds_ptr);
 
 		/* XXX */
 		tmp = realloc(data->a, sizeof *data->a * (data->n + 1));
@@ -827,7 +827,7 @@ done:
 	/* pad up to a byte with zero bits */
 	while ((*ds_ptr & 7) != 0) {
 		int z;
-		z = take_bits(ds, 1, ds_ptr);
+		z = take_bits(ds->data, ds->bits, 1, ds_ptr);
 		if (z != 0) {
 			free(data->a);
 			return QR_ERROR_INVALID_PADDING; // XXX
@@ -837,7 +837,7 @@ done:
 	/* pad with alternating bytes */
 	for (uint8_t padByte = 0xEC; *ds_ptr < ds->bits; padByte ^= 0xEC ^ 0x11) {
 		int z;
-		z = take_bits(ds, 8, ds_ptr);
+		z = take_bits(ds->data, ds->bits, 8, ds_ptr);
 		if (z != padByte) {
 			free(data->a);
 			return QR_ERROR_INVALID_PADDING; // XXX
@@ -881,7 +881,7 @@ qr_decode(const struct qr *q,
 	memcpy(tmp, q->map, QR_BUF_LEN(data->ver));
 	qr_apply_mask(&qtmp, data->mask); // Undoes the mask due to XOR
 
-	read_data(&qtmp, &raw);
+	read_data(&qtmp, raw.data, &raw.bits);
 	err = codestream_ecc(data, stats, &raw, &corrected);
 	if (err)
 		return err;
