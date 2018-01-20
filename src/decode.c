@@ -138,6 +138,7 @@ qr_strerror(enum qr_decode err)
 	case QR_ERROR_INVALID_MODE:      return "Invalid mode";
 	case QR_ERROR_INVALID_GRID_SIZE: return "Invalid grid size";
 	case QR_ERROR_INVALID_VERSION:   return "Invalid version";
+	case QR_ERROR_INVALID_PADDING:   return "Invalid padding";
 	case QR_ERROR_FORMAT_ECC:        return "Format data ECC failure";
 	case QR_ERROR_DATA_ECC:          return "ECC failure";
 	case QR_ERROR_DATA_OVERFLOW:     return "Data overflow";
@@ -822,6 +823,26 @@ decode_payload(struct qr_data *data,
 	}
 
 done:
+
+	/* pad up to a byte with zero bits */
+	while ((*ds_ptr & 7) != 0) {
+		int z;
+		z = take_bits(ds, 1, ds_ptr);
+		if (z != 0) {
+			free(data->a);
+			return QR_ERROR_INVALID_PADDING; // XXX
+		}
+	}
+
+	/* pad with alternating bytes */
+	for (uint8_t padByte = 0xEC; *ds_ptr < ds->bits; padByte ^= 0xEC ^ 0x11) {
+		int z;
+		z = take_bits(ds, 8, ds_ptr);
+		if (z != padByte) {
+			free(data->a);
+			return QR_ERROR_INVALID_PADDING; // XXX
+		}
+	}
 
 	return QR_SUCCESS;
 }
