@@ -176,10 +176,10 @@ prop_gated(struct theft *t, void *instance)
 			}
 		}
 
-		if (data.ver < o->o->min || data.ver > o->o->max) {
+		if (stats.ver < o->o->min || stats.ver > o->o->max) {
 			snprintf(o->v_err, sizeof o->v_err,
 				"version mismatch: got=%u, expected min=%u, max=%u",
-				data.ver, o->o->min, o->o->max);
+				stats.ver, o->o->min, o->o->max);
 			o->gate = GATE_METADATA;
 			return THEFT_TRIAL_FAIL;
 		}
@@ -348,7 +348,7 @@ type_print(FILE *f, const void *instance, void *env)
 	}
 
 	{
-		printf("	Version: %u\n", o->data.ver);
+		printf("	Version: %u\n", o->stats.ver);
 		printf("	ECC level: %c\n", "MLHQ"[o->data.ecl]);
 		printf("	Mask: %d\n", o->data.mask);
 	}

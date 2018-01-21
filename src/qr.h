@@ -111,7 +111,6 @@ struct qr_bytes {
 };
 
 struct qr_data {
-	unsigned ver;
 	enum qr_ecl ecl;
 	enum qr_mask mask;
 
@@ -124,6 +123,7 @@ struct qr_data {
 };
 
 struct qr_stats {
+	unsigned ver;
 	unsigned format_corrections;
 	unsigned codeword_corrections;
 	struct qr_bytes raw;

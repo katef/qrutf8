@@ -438,7 +438,7 @@ main(int argc, char * const argv[])
 		} else {
 			printf("  Decoding successful:\n");
 
-			printf("    Version: %d\n", data.ver);
+			printf("    Version: %d\n", stats.ver);
 			printf("    ECC level: %c\n", "LMQH"[(int) data.ecl]);
 			printf("    Mask: %d\n", data.mask);
 
@@ -446,7 +446,7 @@ main(int argc, char * const argv[])
 			uint8_t mtmp[QR_BUF_LEN_MAX];
 			mq.size = q.size;
 			mq.map = mtmp;
-			memcpy(mq.map, q.map, QR_BUF_LEN(data.ver));
+			memcpy(mq.map, q.map, QR_BUF_LEN(stats.ver));
 			qr_apply_mask(&mq, data.mask);
 			qr_print_utf8qb(stdout, &mq, uwidth, invert);
 

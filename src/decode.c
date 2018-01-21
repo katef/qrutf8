@@ -501,9 +501,9 @@ read_format(const struct qr *q,
 static enum qr_decode
 codestream_ecc(struct qr_data *data, struct qr_stats *stats)
 {
-	const int blockEccLen = ECL_CODEWORDS_PER_BLOCK[data->ver][data->ecl];
-	const int rawCodewords = count_data_bits(data->ver) / 8;
-	const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[data->ver][data->ecl];
+	const int blockEccLen = ECL_CODEWORDS_PER_BLOCK[stats->ver][data->ecl];
+	const int rawCodewords = count_data_bits(stats->ver) / 8;
+	const int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[stats->ver][data->ecl];
 	const int numShortBlocks = numBlocks - rawCodewords % numBlocks;
 	const int ecc_bs = rawCodewords / numBlocks;
 	const int shortBlockDataLen = ecc_bs - blockEccLen;
@@ -774,7 +774,7 @@ decode_eci(struct qr_segment *seg,
 }
 
 static enum qr_decode
-decode_payload(struct qr_data *data,
+decode_payload(struct qr_data *data, unsigned ver,
 	struct qr_bytes *ds, struct qr_bytes *padding, size_t *ds_ptr)
 {
 	data->n = 0;
@@ -811,11 +811,11 @@ decode_payload(struct qr_data *data,
 		}
 
 		switch (mode) {
-		case QR_MODE_NUMERIC: err = decode_numeric(data->ver, data->a[i], ds, ds_ptr); break;
-		case QR_MODE_ALNUM:   err = decode_alnum  (data->ver, data->a[i], ds, ds_ptr); break;
-		case QR_MODE_BYTE:    err = decode_byte   (data->ver, data->a[i], ds, ds_ptr); break;
-		case QR_MODE_KANJI:   err = decode_kanji  (data->ver, data->a[i], ds, ds_ptr); break;
-		case QR_MODE_ECI:     err = decode_eci    (           data->a[i], ds, ds_ptr); break;
+		case QR_MODE_NUMERIC: err = decode_numeric(ver, data->a[i], ds, ds_ptr); break;
+		case QR_MODE_ALNUM:   err = decode_alnum  (ver, data->a[i], ds, ds_ptr); break;
+		case QR_MODE_BYTE:    err = decode_byte   (ver, data->a[i], ds, ds_ptr); break;
+		case QR_MODE_KANJI:   err = decode_kanji  (ver, data->a[i], ds, ds_ptr); break;
+		case QR_MODE_ECI:     err = decode_eci    (     data->a[i], ds, ds_ptr); break;
 
 		default:
 			free(data->a);
@@ -871,9 +871,9 @@ qr_decode(const struct qr *q,
 	if ((q->size - 17) % 4)
 		return QR_ERROR_INVALID_GRID_SIZE;
 
-	data->ver = QR_VER(q->size);
+	stats->ver = QR_VER(q->size);
 
-	if (data->ver < QR_VER_MIN || data->ver > QR_VER_MAX)
+	if (stats->ver < QR_VER_MIN || stats->ver > QR_VER_MAX)
 		return QR_ERROR_INVALID_VERSION;
 
 	/* Read format information -- try both locations */
@@ -887,7 +887,7 @@ qr_decode(const struct qr *q,
 	struct qr qtmp;
 	qtmp.map  = tmp;
 	qtmp.size = q->size;
-	memcpy(tmp, q->map, QR_BUF_LEN(data->ver));
+	memcpy(tmp, q->map, QR_BUF_LEN(stats->ver));
 	qr_apply_mask(&qtmp, data->mask); // Undoes the mask due to XOR
 
 	read_data(&qtmp, stats->raw.data, &stats->raw.bits);
@@ -896,7 +896,7 @@ qr_decode(const struct qr *q,
 		return err;
 
 	size_t ds_ptr = 0;
-	err = decode_payload(data, &stats->corrected, &stats->padding, &ds_ptr);
+	err = decode_payload(data, stats->ver, &stats->corrected, &stats->padding, &ds_ptr);
 	if (err)
 		return err;
 
