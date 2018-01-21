@@ -101,6 +101,15 @@ enum qr_ecl {
 /* XXX: define in terms of something else */
 #define QR_PAYLOAD_MAX 8896
 
+/*
+ * .bits is always in the range [0, 32767]. The maximum bit length is 32767,
+ * because the largest QR Code (version 40) has only 31329 modules.
+ */
+struct qr_bytes {
+	uint8_t data[QR_PAYLOAD_MAX];
+	size_t bits;
+};
+
 struct qr_data {
 	unsigned ver;
 	enum qr_ecl ecl;
@@ -117,15 +126,12 @@ struct qr_data {
 struct qr_stats {
 	unsigned format_corrections;
 	unsigned codeword_corrections;
-};
-
-/*
- * .bits is always in the range [0, 32767]. The maximum bit length is 32767,
- * because the largest QR Code (version 40) has only 31329 modules.
- */
-struct qr_bytes {
-	uint8_t data[QR_PAYLOAD_MAX];
-	size_t bits;
+	struct qr_bytes raw;
+	struct qr_bytes ecc;
+	struct qr_bytes corrected;
+	struct qr_bytes padding;
+	uint16_t format_raw[2];
+	uint16_t format_corrected[2];
 };
 
 /*

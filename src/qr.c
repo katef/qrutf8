@@ -16,6 +16,7 @@
 #include "internal.h"
 #include "ssim.h"
 #include "seg.h"
+#include "util.h"
 #include "xalloc.h"
 
 enum img {
@@ -309,6 +310,20 @@ main(int argc, char * const argv[])
 			qr_print_utf8qb(stdout, &mq, uwidth, invert);
 
 			printf("    Noise: %u\n", noise);
+			printf("    Raw bitstream: %zu bits\n", stats.raw.bits);
+			hexdump(stdout, stats.raw.data, BM_LEN(stats.raw.bits));
+			printf("    ECC bitstream: %zu bits\n", stats.ecc.bits);
+			hexdump(stdout, stats.ecc.data, BM_LEN(stats.ecc.bits));
+			printf("    Corrected bitstream: %zu bits\n", stats.corrected.bits);
+			hexdump(stdout, stats.corrected.data, BM_LEN(stats.corrected.bits));
+			printf("    Padding: %zu bits\n", stats.padding.bits);
+			hexdump(stdout, stats.padding.data, BM_LEN(stats.padding.bits));
+			printf("    Raw formats:\n");
+			hexdump(stdout, (void *) &stats.format_raw[0], sizeof stats.format_raw[0]);
+			hexdump(stdout, (void *) &stats.format_raw[1], sizeof stats.format_raw[1]);
+			printf("    Corrected formats:\n");
+			hexdump(stdout, (void *) &stats.format_corrected[0], sizeof stats.format_corrected[0]);
+			hexdump(stdout, (void *) &stats.format_corrected[1], sizeof stats.format_corrected[1]);
 			printf("    Format corrections: %u\n", stats.format_corrections);
 			printf("    Codeword corrections: %u\n", stats.codeword_corrections);
 			seg_print(stdout, data.n, data.a);
