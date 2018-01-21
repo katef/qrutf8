@@ -830,6 +830,8 @@ decode_payload(struct qr_data *data,
 
 done:
 
+	padding->bits = 0;
+
 	/* pad up to a byte with zero bits */
 	while ((*ds_ptr & 7) != 0) {
 		int z;
@@ -868,12 +870,6 @@ qr_decode(const struct qr *q,
 
 	if ((q->size - 17) % 4)
 		return QR_ERROR_INVALID_GRID_SIZE;
-
-	memset(data, 0, sizeof(*data));
-	memset(&stats->raw, 0, sizeof(stats->raw));
-	memset(&stats->ecc, 0, sizeof(stats->ecc));
-	memset(&stats->corrected, 0, sizeof(stats->corrected));
-	memset(&stats->padding, 0, sizeof(stats->padding));
 
 	data->ver = QR_VER(q->size);
 

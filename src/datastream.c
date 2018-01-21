@@ -95,6 +95,8 @@ read_data(const struct qr *q,
 	int x = q->size - 1;
 	int dir = -1;
 
+	*bits = 0;
+
 	while (x > 0) {
 		if (x == 6)
 			x--;
