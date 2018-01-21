@@ -26,7 +26,7 @@ hexdump(FILE *f, const uint8_t *buf, size_t size)
 		}
 
 #else
-		fprintf(f, "%04zx -- ", offset);
+		fprintf(f, "        %04zx -- ", offset);
 		for (size_t i = 0; i < curr; i++) {
 			fprintf(f, "%02x ", buf[offset + i]);
 		}
