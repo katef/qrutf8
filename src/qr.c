@@ -14,7 +14,9 @@
 #include <io.h>
 
 #include "internal.h"
+#include "fuzz.h"
 #include "ssim.h"
+#include "pcg.h"
 #include "seg.h"
 #include "util.h"
 #include "xalloc.h"
@@ -79,6 +81,129 @@ yv12(const struct qr *q, YV12_BUFFER_CONFIG *img)
 		for (x = 0; x < q->size; x++) {
 			img->y_buffer[y * q->size + x] = qr_get_module(q, x, y) ? 255 : 0;
 		}
+	}
+}
+
+static void
+fuzz_ecl(void *opaque, enum qr_ecl *ecl, bool *boost_ecl)
+{
+	pcg32_random_t *pcg = opaque;
+
+	assert(pcg != NULL);
+	assert(ecl != NULL);
+	assert(boost_ecl != NULL);
+
+	*ecl       = pcg32_boundedrand_r(pcg, 4);
+	*boost_ecl = pcg32_boundedrand_r(pcg, 2);
+}
+
+static void
+fuzz_ver(void *opaque, unsigned *min, unsigned *max)
+{
+	pcg32_random_t *pcg = opaque;
+
+	assert(pcg != NULL);
+	assert(min != NULL);
+	assert(max != NULL);
+
+	*min = pcg32_boundedrand_r(pcg, QR_VER_MAX - QR_VER_MIN + 1) + QR_VER_MIN;
+	*max = pcg32_boundedrand_r(pcg, QR_VER_MAX - *min + 1) + *min;
+}
+
+static void
+fuzz_mask(void *opaque, signed *mask)
+{
+	pcg32_random_t *pcg = opaque;
+
+	assert(pcg != NULL);
+	assert(mask != NULL);
+
+	*mask = pcg32_boundedrand_r(pcg, 1 + 8) - 1;
+}
+
+static void
+fuzz_mode(void *opaque, enum qr_mode *mode)
+{
+	pcg32_random_t *pcg = opaque;
+
+	const enum qr_mode m[] = {
+		QR_MODE_NUMERIC,
+		QR_MODE_ALNUM,
+		QR_MODE_BYTE,
+		QR_MODE_KANJI,
+		QR_MODE_ECI
+	};
+
+	assert(pcg != NULL);
+	assert(mode != NULL);
+
+	*mode = m[pcg32_boundedrand_r(pcg, sizeof m / sizeof *m)];
+}
+
+static void
+fuzz_uint(void *opaque, unsigned *n, unsigned max)
+{
+	pcg32_random_t *pcg = opaque;
+
+	assert(pcg != NULL);
+	assert(n != NULL);
+
+	*n = pcg32_boundedrand_r(pcg, max + 1);
+}
+
+static void
+encode_fuzz(struct qr *q, uint64_t seed,
+	enum eci eci,
+	enum qr_ecl ecl,
+	unsigned min, unsigned max,
+	enum qr_mask mask,
+	bool boost_ecl)
+{
+	struct fuzz_instance *o;
+	pcg32_random_t pcg;
+
+	const struct fuzz_hook hook = {
+		.fuzz_ecl  = fuzz_ecl,
+		.fuzz_ver  = fuzz_ver,
+		.fuzz_mask = fuzz_mask,
+		.fuzz_mode = fuzz_mode,
+		.fuzz_uint = fuzz_uint
+	};
+
+	pcg32_srandom_r(&pcg, seed, 1);
+
+	do {
+		o = fuzz_alloc(&pcg, &hook);
+	} while (o == NULL);
+
+	/* TODO: */
+	(void) eci;
+
+	if (!boost_ecl) {
+		o->ecl = ecl;
+	}
+
+	if (o->min < min) {
+		o->min = min;
+	}
+
+	if (o->max > max) {
+		o->max = max;
+	}
+
+	if (o->min > o->max) {
+		o->min = o->max;
+	}
+
+	if (mask != QR_MASK_AUTO) {
+		o->mask = mask;
+	}
+
+	uint8_t tmp[QR_BUF_LEN_MAX];
+
+	if (!qr_encode(o->a, o->n, o->ecl, o->min, o->max, o->mask, o->boost_ecl, tmp, q)) {
+		/* TODO: */
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -153,6 +278,7 @@ main(int argc, char * const argv[])
 	enum eci eci;
 	unsigned min, max;
 	bool boost_ecl;
+	bool fuzz;
 	bool decode;
 	bool invert;
 	enum qr_utf8 uwidth;
@@ -168,6 +294,7 @@ main(int argc, char * const argv[])
 	ecl  = QR_ECL_LOW;
 	eci  = ECI_DEFAULT;
 	boost_ecl = true;
+	fuzz = false;
 	decode = false;
 	invert = true;
 	uwidth = QR_UTF8_DOUBLE;
@@ -178,7 +305,7 @@ main(int argc, char * const argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:y:sw"), c != -1) {
+		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:y:swz"), c != -1) {
 			switch (c) {
 			case 'd':
 				decode = true;
@@ -190,6 +317,10 @@ main(int argc, char * const argv[])
 
 			case 'b':
 				boost_ecl = false;
+				break;
+
+			case 'z':
+				fuzz = true;
 				break;
 
 			case 'f':
@@ -274,6 +405,10 @@ main(int argc, char * const argv[])
 		}
 
 		encode_file(&q, filename);
+	} else if (fuzz) {
+		encode_fuzz(&q, seed,
+			eci,
+			ecl, min, max, mask, boost_ecl);
 	} else {
 		encode_argv(&q, argc, argv,
 			eci,
