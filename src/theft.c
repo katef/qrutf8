@@ -93,7 +93,7 @@ prop_gated(struct theft *t, void *instance)
 	}
 
 	if ((g & GATE_NOISE) != 0) {
-		long seed;
+		uint64_t seed;
 
 		/* XXX: need to add noise in *either* the data or ECC codeword bits,
 		 * not both.
@@ -106,7 +106,7 @@ prop_gated(struct theft *t, void *instance)
 		o->codeword_noise = theft_random_choice(t, (o->q.size * o->q.size) / 2);
 #endif
 
-		seed  = theft_random_choice(t, LONG_MAX); /* XXX: ignoring negative values */
+		seed  = theft_random_choice(t, UINT64_MAX);
 
 		/* TODO: pass function pointer for rand? */
 		qr_noise(&o->q, o->codeword_noise, seed, true);

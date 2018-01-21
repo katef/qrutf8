@@ -158,6 +158,7 @@ main(int argc, char * const argv[])
 	enum qr_utf8 uwidth;
 	unsigned noise;
 	enum img img;
+	uint64_t seed;
 	const char *filename = NULL;
 	const char *target   = NULL;
 
@@ -171,12 +172,13 @@ main(int argc, char * const argv[])
 	invert = true;
 	uwidth = QR_UTF8_DOUBLE;
 	noise = 0;
+	seed = 0;
 	img = IMG_UTF8QB;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:sw"), c != -1) {
+		while (c = getopt(argc, argv, "drbf:t:l:m:n:e:v:y:sw"), c != -1) {
 			switch (c) {
 			case 'd':
 				decode = true;
@@ -212,6 +214,10 @@ main(int argc, char * const argv[])
 
 			case 'l':
 				img = imgname(optarg);
+				break;
+
+			case 'y':
+				seed = atoi(optarg); /* XXX */
 				break;
 
 			case 'm':
@@ -274,7 +280,7 @@ main(int argc, char * const argv[])
 			ecl, min, max, mask, boost_ecl);
 	}
 
-	qr_noise(&q, noise, 0, false);
+	qr_noise(&q, noise, seed, false);
 
 	switch (img) {
 	case IMG_UTF8QB: qr_print_utf8qb(stdout, &q, uwidth, invert); break;
