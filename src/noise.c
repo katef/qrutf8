@@ -1,6 +1,4 @@
 
-#define _XOPEN_SOURCE
-
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -10,6 +8,7 @@
 #include <qr.h>
 
 #include "internal.h"
+#include "pcg.h"
 
 void
 qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)
@@ -17,6 +16,7 @@ qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)
 	const size_t bits = q->size * q->size;
 	uint8_t buf[QR_BUF_LEN_MAX] = { 0 };
 	uint8_t noise[QR_BUF_LEN_MAX] = { 0 };
+	pcg32_random_t pcg;
 	struct qr reserved;
 	size_t i;
 
@@ -29,7 +29,7 @@ qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)
 	/* TODO: generalise to an enum describing regions; format, ecc, alignments, data, etc. mask together */
 	draw_init(ver, &reserved);
 
-	srand48(seed);
+	pcg32_srandom_r(&pcg, seed, 0);
 
 	/*
 	 * Alternate implementation for bounded runtime: set (1 << n) - 1
@@ -38,7 +38,7 @@ qr_noise(struct qr *q, size_t n, long seed, bool skip_reserved)
 	 */
 
 	while (n > 0) {
-		i = lrand48() % (bits + 1);
+		i = pcg32_boundedrand_r(&pcg, bits + 1);
 
 		if (skip_reserved) {
 			if (BM_GET(reserved.map, i)) {
