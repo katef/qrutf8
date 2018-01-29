@@ -6,7 +6,7 @@ void
 append_bit(bool v, void *buf, size_t *bits);
 
 void
-append_bits(unsigned v, size_t n, void *buf, size_t *count);
+append_bits(uint32_t v, size_t n, void *buf, size_t *count);
 
 void
 read_data(const struct qr *q,

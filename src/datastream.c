@@ -78,9 +78,9 @@ append_bit(bool v, void *buf, size_t *bits)
  * increasing the bit length.
  */
 void
-append_bits(unsigned v, size_t n, void *buf, size_t *count)
+append_bits(uint32_t v, size_t n, void *buf, size_t *count)
 {
-	assert(n <= 16 && v >> n == 0);
+	assert(n <= CHAR_BIT * sizeof v && v >> n == 0);
 
 	for (int i = n - 1; i >= 0; i--) {
 		append_bit((v >> i) & 1, buf, count);
