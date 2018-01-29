@@ -81,7 +81,7 @@ void
 append_bits(uint32_t v, size_t n, void *buf, size_t *count)
 {
 	assert(n <= CHAR_BIT * sizeof v);
-	assert(v >> n == 0);
+	assert((uint64_t) v >> n == 0);
 
 	for (int i = n - 1; i >= 0; i--) {
 		append_bit((v >> i) & 1, buf, count);
