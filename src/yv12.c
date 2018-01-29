@@ -34,19 +34,36 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef SSIM_H
-#define SSIM_H
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-double vp8_calc_ssimg
-(
-    YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest
-);
-double vp8_calc_ssim
-(
-    YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest
-);
+#include <eci.h>
+#include <qr.h>
 
-#endif
+#include "yv12.h"
+#include "xalloc.h"
+
+void
+qr_yv12(const struct qr *q, YV12_BUFFER_CONFIG *img)
+{
+	size_t x, y;
+
+	img->y_width   = q->size;
+	img->y_height  = q->size;
+	img->y_stride  = q->size;
+	img->uv_width  = q->size;
+	img->uv_height = q->size;
+	img->uv_stride = q->size;
+
+	img->y_buffer  = xmalloc(q->size * q->size);
+	img->u_buffer  = img->y_buffer;
+	img->v_buffer  = img->y_buffer;
+
+	for (y = 0; y < q->size; y++) {
+		for (x = 0; x < q->size; x++) {
+			img->y_buffer[y * q->size + x] = qr_get_module(q, x, y) ? 255 : 0;
+		}
+	}
+}
 

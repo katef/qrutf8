@@ -15,6 +15,7 @@
 
 #include "internal.h"
 #include "fuzz.h"
+#include "yv12.h"
 #include "ssim.h"
 #include "pcg.h"
 #include "seg.h"
@@ -59,29 +60,6 @@ imgname(const char *s)
 	}
 
 	exit(EXIT_FAILURE);
-}
-
-static void
-yv12(const struct qr *q, YV12_BUFFER_CONFIG *img)
-{
-	size_t x, y;
-
-	img->y_width   = q->size;
-	img->y_height  = q->size;
-	img->y_stride  = q->size;
-	img->uv_width  = q->size;
-	img->uv_height = q->size;
-	img->uv_stride = q->size;
-
-	img->y_buffer  = xmalloc(q->size * q->size);
-	img->u_buffer  = img->y_buffer;
-	img->v_buffer  = img->y_buffer;
-
-	for (y = 0; y < q->size; y++) {
-		for (x = 0; x < q->size; x++) {
-			img->y_buffer[y * q->size + x] = qr_get_module(q, x, y) ? 255 : 0;
-		}
-	}
 }
 
 static void
@@ -495,8 +473,8 @@ main(int argc, char * const argv[])
 
 		YV12_BUFFER_CONFIG a, b;
 
-		yv12(&q, &a);
-		yv12(&t, &b);
+		qr_yv12(&q, &a);
+		qr_yv12(&t, &b);
 
 		p = vp8_calc_ssimg(&a, &b);
 		printf("ssimg: %f\n", 1 / (1 - p));

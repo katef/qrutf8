@@ -35,6 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <math.h>
+
+#include "yv12.h"
 #include "ssim.h"
 
 // Google version of SSIM

@@ -34,19 +34,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef SSIM_H
-#define SSIM_H
+#ifndef YV12_H
+#define YV12_H
 
-double vp8_calc_ssimg
-(
-    YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest
-);
-double vp8_calc_ssim
-(
-    YV12_BUFFER_CONFIG *source,
-    YV12_BUFFER_CONFIG *dest
-);
+struct qr;
+
+typedef struct
+{
+	int y_width;
+	int y_height;
+	int y_stride;
+
+	int uv_width;
+	int uv_height;
+	int uv_stride;
+
+	unsigned char *y_buffer;
+	unsigned char *u_buffer;
+	unsigned char *v_buffer;
+} YV12_BUFFER_CONFIG;
+
+void
+qr_yv12(const struct qr *q, YV12_BUFFER_CONFIG *img);
 
 #endif
 
